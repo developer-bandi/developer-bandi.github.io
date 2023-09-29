@@ -1,0 +1,6 @@
+.container {
+  margin-top: 50px;
+  :global .css-wjh20t-MuiPagination-ul {
+    justify-content: center;
+  }
+}
