@@ -13,7 +13,7 @@ const IndexPage = ({ data }: Props) => {
   return <Page data={data} />
 }
 
-export const Head = () => <Seo title="Home" />
+export const Head = () => <Seo title="개발자 반디의 기술 블로그" />
 
 export default IndexPage
 
@@ -23,9 +23,10 @@ export const query = graphql`
       nodes {
         frontmatter {
           title
-          date(formatString: "MMMM D, YYYY")
+          date(formatString: "YYYY. MM. DD")
           description
           category
+          slug
           thumbnail {
             childImageSharp {
               gatsbyImageData
@@ -45,6 +46,7 @@ export type ContentListQuery = {
         category: string
         date: string
         description: string
+        slug: string
         thumbnail: ImageDataLike
       }
     }[]

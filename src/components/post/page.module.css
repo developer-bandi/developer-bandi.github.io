@@ -1,0 +1,54 @@
+:global {
+  .gatsby-resp-image-figcaption {
+    display: flex;
+    justify-content: center;
+  }
+}
+
+.container {
+  max-width: 940px;
+  margin: 100px 30px 50px 30px;
+}
+
+@media (min-width: 1015px) {
+  .container {
+    margin: 100px auto 50px auto;
+  }
+}
+
+.summaryWrap {
+}
+
+.thumbnail {
+  width: 100%;
+  border-radius: 40px;
+}
+
+.infoWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin: 30px 0 60px 0;
+}
+
+.category {
+  font-size: 18px;
+  font-weight: 600;
+  color: skyblue;
+}
+
+.title {
+  font-size: 32px;
+  font-weight: 700;
+}
+
+.description {
+  font-size: 22px;
+  font-weight: 400;
+}
+
+.date {
+  font-size: 15px;
+  font-weight: 400;
+  color: rgb(144, 148, 154);
+}

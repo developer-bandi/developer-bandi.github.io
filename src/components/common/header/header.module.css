@@ -32,6 +32,9 @@
   font-size: 18px;
   text-decoration: none;
   color: black;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .nav {
@@ -41,5 +44,9 @@
       margin: 0;
       list-style: none;
     }
+  }
+  & a {
+    color: black;
+    text-decoration: none;
   }
 }

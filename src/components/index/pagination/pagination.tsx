@@ -14,7 +14,6 @@ const Pagination = ({ count, page, onChange }: props) => {
     <MuiPagination
       count={count}
       page={page}
-      color="primary"
       onChange={onChange}
       className={styles.container}
     />

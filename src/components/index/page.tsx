@@ -5,9 +5,9 @@ import Footer from "../common/footer/footer"
 import Naviagtion from "../index/navigation/navigation"
 import Pagination from "../index/pagination/pagination"
 import CardList from "./cardList/cardList"
-
-import * as styles from "./page.module.css"
 import { ContentListQuery } from "../../pages"
+import { PAGE_UNIT } from "./constant"
+import * as styles from "./page.module.css"
 
 type Props = {
   data: ContentListQuery
@@ -16,6 +16,21 @@ type Props = {
 const Page = ({ data }: Props) => {
   const [category, setCategory] = React.useState("전체")
   const [page, setPage] = React.useState(1)
+  const [list, setList] = React.useState(
+    data.allMdx.nodes.map(({ frontmatter }) => frontmatter)
+  )
+
+  /*** Effect ***/
+  React.useEffect(() => {
+    setList(
+      data.allMdx.nodes
+        .map(({ frontmatter }) => frontmatter)
+        .filter(listInfo => {
+          if (category === "전체") return true
+          return listInfo.category === category
+        })
+    )
+  }, [category, page])
 
   /*** Event Handler ***/
   const navigationChangeHandler = (
@@ -38,13 +53,24 @@ const Page = ({ data }: Props) => {
       <Header />
       <main className={styles.container}>
         <Naviagtion
-          list={["전체", "기술아티클", "토이시리즈", "회고"]}
+          list={["전체", "기술아티클", "회고"]}
           onChange={navigationChangeHandler}
         />
-        <CardList
-          list={data.allMdx.nodes.map(({ frontmatter }) => frontmatter)}
-        />
-        <Pagination count={10} page={page} onChange={paginationChangeHandler} />
+        {list.length === 0 ? (
+          <div className={styles.empty}>아직 작성된 글이 없습니다</div>
+        ) : (
+          <>
+            {" "}
+            <CardList
+              list={list.slice((page - 1) * PAGE_UNIT, page * PAGE_UNIT)}
+            />
+            <Pagination
+              count={Math.ceil(list.length / PAGE_UNIT)}
+              page={page}
+              onChange={paginationChangeHandler}
+            />
+          </>
+        )}
       </main>
       <Footer />
     </>

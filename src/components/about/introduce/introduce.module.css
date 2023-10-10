@@ -1,0 +1,27 @@
+.container {
+  margin-bottom: 50px;
+}
+
+.nameLine {
+  font-size: 50px;
+  margin-bottom: 30px;
+}
+
+.introBox {
+  background-color: #f8f9fa;
+  padding: 24px;
+  margin: 20px 0 30px 0;
+  line-height: 27.2px;
+  font-size: 17px;
+  letter-spacing: normal;
+  border-radius: 20px;
+}
+
+.introBox ul {
+  margin: 0;
+  list-style: none;
+  padding-left: 0px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}

@@ -1,0 +1,10 @@
+.container {
+  max-width: 1140px;
+  margin: 120px 30px 50px 30px;
+}
+
+@media (min-width: 1215px) {
+  .container {
+    margin: 120px auto 50px auto;
+  }
+}

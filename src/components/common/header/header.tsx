@@ -10,10 +10,9 @@ const Header = () => {
       <div className={styles.wrapper}>
         <Link to="/" className={styles.title}>
           <StaticImage
-            src="../../../images/logo.svg"
+            src="../../../images/logo-big.png"
             loading="eager"
-            width={24}
-            quality={24}
+            width={30}
             formats={["auto", "webp", "avif"]}
             alt="logo"
             className={styles.logo}
@@ -22,7 +21,9 @@ const Header = () => {
         </Link>
         <nav className={styles.nav}>
           <ul>
-            <li>About</li>
+            <li>
+              <Link to="/about">About</Link>
+            </li>
           </ul>
         </nav>
       </div>

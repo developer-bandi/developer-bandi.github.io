@@ -8,16 +8,28 @@
 import * as React from "react"
 import { useStaticQuery, graphql } from "gatsby"
 
-function Seo({ description, title, children }: any) {
-  const { site } = useStaticQuery(
+type Props = {
+  title: string
+  thumbnail?: string
+  description?: string
+  children?: React.ReactElement
+}
+
+function Seo({ title, thumbnail, description, children }: Props) {
+  const { site, file } = useStaticQuery(
     graphql`
-      query {
+      query abc {
         site {
           siteMetadata {
             title
             description
             author
+            keyword
+            siteUrl
           }
+        }
+        file(base: { eq: "logo-big.png" }) {
+          publicURL
         }
       }
     `
@@ -25,18 +37,30 @@ function Seo({ description, title, children }: any) {
 
   const metaDescription = description || site.siteMetadata.description
   const defaultTitle = site.siteMetadata?.title
+  const metaAuthor = site.siteMetadata?.author
+  const metaKeyword = site.siteMetadata?.keyword
+  const metaSiteUrl = site.siteMetadata?.siteUrl
+  const metaThumbnail = thumbnail
+    ? `${metaSiteUrl}${thumbnail}`
+    : `${metaSiteUrl}${file.publicURL}`
 
   return (
     <>
-      <title>{defaultTitle ? `${title} | ${defaultTitle}` : title}</title>
+      <title>{title}</title>
       <meta name="description" content={metaDescription} />
+      <meta name="author" content={metaAuthor} />
+      <meta name="keywords" content={metaKeyword} />
+      <meta property="og:site_name" content={defaultTitle} />
       <meta property="og:title" content={title} />
       <meta property="og:description" content={metaDescription} />
       <meta property="og:type" content="website" />
+      <meta property="og:url" content={metaSiteUrl} />
+      <meta name="og:image" content={metaThumbnail} />
       <meta name="twitter:card" content="summary" />
-      <meta name="twitter:creator" content={site.siteMetadata?.author || ``} />
+      <meta name="twitter:creator" content={metaAuthor} />
       <meta name="twitter:title" content={title} />
       <meta name="twitter:description" content={metaDescription} />
+      <meta name="twitter:image" content={metaThumbnail} />
       {children}
     </>
   )

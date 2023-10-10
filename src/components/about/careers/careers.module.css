@@ -1,0 +1,26 @@
+.title {
+  font-size: 32px;
+}
+
+.listWrap {
+  list-style: none;
+  padding-left: 0px;
+  border-top: 1px solid #eaeaea;
+}
+
+.listWrap li {
+  padding: 24px;
+  border-bottom: 1px solid #eaeaea;
+  display: flex;
+  align-items: center;
+  gap: 30px;
+}
+
+.listWrap strong {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.listWrap div {
+  color: rgb(107, 114, 128);
+}

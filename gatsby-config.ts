@@ -10,9 +10,10 @@
 module.exports = {
   siteMetadata: {
     title: `개발자 반디의 기술블로그`,
-    description: `프론트엔드 개발자로 일하고있는 반디 라고합니다.`,
-    author: `김상두`,
-    siteUrl: `https://gatsbystarterdefaultsource.gatsbyjs.io/`,
+    description: `프론트엔드 개발자로 일하고있는 반디의 기술블로그 입니다`,
+    author: `반디`,
+    keyword: "Frontend, Javascript, React",
+    siteUrl: `https://puki4416.github.io`,
   },
   plugins: [
     `gatsby-plugin-image`,
@@ -40,9 +41,55 @@ module.exports = {
         start_url: `/`,
         background_color: `#34A1BC`,
         display: `minimal-ui`,
-        icon: `src/images/logo.svg`, // This path is relative to the root of the site.
+        icon: `src/images/logo.png`,
       },
     },
-    "gatsby-plugin-mdx",
+    {
+      resolve: `gatsby-plugin-mdx`,
+      options: {
+        gatsbyRemarkPlugins: [
+          {
+            resolve: `gatsby-remark-images`,
+            options: {
+              maxWidth: 940,
+              showCaptions: true,
+            },
+          },
+          {
+            resolve: `gatsby-remark-external-links`,
+          },
+          {
+            resolve: `gatsby-remark-prismjs`,
+            options: {
+              classPrefix: "language-",
+              inlineCodeMarker: null,
+              aliases: {},
+              showLineNumbers: true,
+              noInlineHighlight: false,
+              languageExtensions: [
+                {
+                  language: "superscript",
+                  extend: "javascript",
+                  definition: {
+                    superscript_types: /(SuperType)/,
+                  },
+                  insertBefore: {
+                    function: {
+                      superscript_keywords: /(superif|superelse)/,
+                    },
+                  },
+                },
+              ],
+              prompt: {
+                user: "root",
+                host: "localhost",
+                global: false,
+              },
+              escapeEntities: {},
+            },
+          },
+        ],
+      },
+    },
   ],
 }

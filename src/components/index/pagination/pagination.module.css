@@ -3,4 +3,8 @@
   :global .css-wjh20t-MuiPagination-ul {
     justify-content: center;
   }
+  :global .css-yuzg60-MuiButtonBase-root-MuiPaginationItem-root.Mui-selected {
+    background-color: skyblue !important;
+    color: white;
+  }
 }

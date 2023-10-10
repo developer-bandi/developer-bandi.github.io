@@ -2,6 +2,13 @@
   width: 100%;
   display: flex;
   gap: 30px;
+  text-decoration: none;
+  color: black;
+  &:hover {
+    .title {
+      color: lightblue;
+    }
+  }
 }
 
 .thumbnail {
@@ -21,6 +28,7 @@
 .category {
   font-size: 15px;
   color: rgb(139, 149, 161);
+  margin-bottom: 3px;
 }
 
 .title {

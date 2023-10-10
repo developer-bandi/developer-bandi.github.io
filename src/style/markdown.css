@@ -1,0 +1,120 @@
+.markdown-body {
+  color: rgb(51, 61, 75);
+}
+
+.markdown-body p {
+  color: unset;
+  margin: 20px 0 10px 0;
+  line-height: 27.2px;
+  font-size: 17px;
+  letter-spacing: normal;
+}
+
+.markdown-body > blockquote {
+  border-left: 0.25rem solid #d8e0e7;
+  color: rgb(144, 148, 154) !important;
+  margin: 12px 0 18px 0;
+  padding-left: 20px;
+}
+
+.markdown-body a {
+  word-wrap: break-word;
+  word-break: keep-all;
+  color: skyblue;
+}
+
+.language-text {
+  background-color: #f6f9fc !important;
+  color: skyblue !important;
+}
+
+.language-javascript {
+  margin: 30px 0;
+}
+
+.markdown-body a {
+  word-wrap: break-word;
+  word-break: keep-all;
+  color: skyblue;
+}
+
+.markdown-body h2 {
+  font-size: 23px;
+  font-weight: 800;
+  margin: 50px 0 20px 0;
+}
+
+.markdown-body h3 {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 30px 0 20px 0;
+}
+
+.markdown-body ul {
+  padding-left: 16px;
+  margin-bottom: 24px;
+  color: rgb(51, 61, 75);
+  line-height: 27.2px;
+  font-size: 17px;
+  letter-spacing: normal;
+}
+
+.markdown-body ol {
+  padding-left: 16px;
+  margin-bottom: 24px;
+  color: rgb(51, 61, 75);
+  line-height: 27.2px;
+  font-size: 17px;
+  letter-spacing: normal;
+}
+
+.markdown-body aside {
+  background: #f8f9fa;
+  border-radius: 16px;
+  margin: 0 0 24px 0;
+  padding: 24px;
+}
+
+.markdown-body > aside > p {
+  margin: 0;
+}
+
+.markdown-body li {
+  margin-bottom: 16px;
+}
+
+.gatsby-resp-image-figcaption {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+  color: rgb(144, 148, 154);
+}
+
+.gatsby-highlight > pre {
+  border-radius: 20px;
+  margin: 40px 0;
+}
+
+.gatsby-highlight-code-line {
+  background-color: #feb;
+  display: block;
+  margin-right: -1em;
+  margin-left: -1em;
+  padding-right: 1em;
+  padding-left: 0.75em;
+  border-left: 0.25em solid #f99;
+}
+
+/**
+ * If you already use line highlighting
+ */
+
+/* Adjust the position of the line numbers */
+.gatsby-highlight pre[class*="language-"].line-numbers {
+  padding: 20px 10px 20px 55px;
+}
+
+.line-numbers-rows {
+  margin: 20px 0 0 15px;
+  border: none !important;
+}
