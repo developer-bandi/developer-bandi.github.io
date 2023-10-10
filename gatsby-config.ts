@@ -13,7 +13,7 @@ module.exports = {
     description: `프론트엔드 개발자로 일하고있는 반디의 기술블로그 입니다`,
     author: `반디`,
     keyword: "Frontend, Javascript, React",
-    siteUrl: `https://puki4416.github.io`,
+    siteUrl: `https://developer-bandi.github.io/`,
   },
   plugins: [
     `gatsby-plugin-image`,
