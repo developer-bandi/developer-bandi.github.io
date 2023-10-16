@@ -11,12 +11,9 @@ type props = {
 
 const Pagination = ({ count, page, onChange }: props) => {
   return (
-    <MuiPagination
-      count={count}
-      page={page}
-      onChange={onChange}
-      className={styles.container}
-    />
+    <div className={styles.container}>
+      <MuiPagination count={count} page={page} onChange={onChange} />
+    </div>
   )
 }
 
