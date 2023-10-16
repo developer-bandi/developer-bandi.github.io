@@ -91,5 +91,12 @@ module.exports = {
         ],
       },
     },
+    {
+      resolve: `gatsby-plugin-gtag`,
+      options: {
+        trackingId: `G-DMDSSM1HZ8`,
+        head: true,
+      },
+    },
   ],
 }
