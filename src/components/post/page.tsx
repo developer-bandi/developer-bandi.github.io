@@ -16,6 +16,12 @@ type Props = {
 const Page = ({ data, content }: Props) => {
   const translatedThumbnail = getImage(data.mdx.frontmatter.thumbnail)
 
+  React.useEffect(() => {
+    setTimeout(() => {
+      window.scrollTo(0, 0)
+    })
+  }, [data])
+
   return (
     <>
       <Header />

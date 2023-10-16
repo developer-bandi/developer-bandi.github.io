@@ -7,6 +7,12 @@ import Introduce from "./introduce/introduce"
 import Careers from "./careers/careers"
 
 const Page = () => {
+  React.useEffect(() => {
+    setTimeout(() => {
+      window.scrollTo(0, 0)
+    })
+  }, [])
+
   return (
     <>
       <Header />
