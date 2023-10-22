@@ -23,7 +23,7 @@ export const Head = ({ data }: any) => {
         data.mdx.frontmatter.thumbnail?.childImageSharp.gatsbyImageData.images
           .fallback.src
       }
-      url={`/post${data.mdx.frontmatter.slug}`}
+      url={`/post${data.mdx.frontmatter.slug}/`}
     />
   )
 }

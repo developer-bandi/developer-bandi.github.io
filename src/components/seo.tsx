@@ -44,8 +44,8 @@ function Seo({ title, thumbnail, description, url, children }: Props) {
     ? site.siteMetadata?.siteUrl + url
     : site.siteMetadata?.siteUrl
   const metaThumbnail = thumbnail
-    ? `${metaSiteUrl}${thumbnail}`
-    : `${metaSiteUrl}${file.publicURL}`
+    ? `${site.siteMetadata?.siteUrl}${thumbnail}`
+    : `${site.siteMetadata?.siteUrl}${file.publicURL}`
 
   return (
     <>
