@@ -10,7 +10,6 @@ type Props = {
 }
 
 const BlogPost = ({ data, children }: Props) => {
-  console.log()
   return <Page data={data} content={children} />
 }
 
@@ -22,6 +21,7 @@ export const Head = ({ data }: any) => (
       data.mdx.frontmatter.thumbnail?.childImageSharp.gatsbyImageData.images
         .fallback.src
     }
+    url={data.mdx.frontmatter.slug}
   />
 )
 
@@ -36,6 +36,7 @@ export const query = graphql`
         description
         category
         estimation
+        slug
         thumbnail {
           childImageSharp {
             gatsbyImageData
