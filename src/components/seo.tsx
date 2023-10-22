@@ -39,7 +39,7 @@ function Seo({ title, thumbnail, description, children }: Props) {
   const defaultTitle = site.siteMetadata?.title
   const metaAuthor = site.siteMetadata?.author
   const metaKeyword = site.siteMetadata?.keyword
-  const metaSiteUrl = site.siteMetadata?.siteUrl
+  const metaSiteUrl = site.siteMetadata?.siteUrl + "post/prepare-developer/"
   const metaThumbnail = thumbnail
     ? `${metaSiteUrl}${thumbnail}`
     : `${metaSiteUrl}${file.publicURL}`
