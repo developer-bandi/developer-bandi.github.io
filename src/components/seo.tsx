@@ -58,7 +58,7 @@ function Seo({ title, thumbnail, description, url, children }: Props) {
       <meta property="og:description" content={metaDescription} />
       <meta property="og:type" content="website" />
       <meta property="og:url" content={metaSiteUrl} />
-      <meta name="og:image" content={metaThumbnail} />
+      <meta property="og:image" content={metaThumbnail} />
       <meta name="twitter:card" content="summary" />
       <meta name="twitter:creator" content={metaAuthor} />
       <meta name="twitter:title" content={title} />
