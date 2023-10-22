@@ -13,17 +13,20 @@ const BlogPost = ({ data, children }: Props) => {
   return <Page data={data} content={children} />
 }
 
-export const Head = ({ data }: any) => (
-  <Seo
-    title={data.mdx.frontmatter.title}
-    description={data.mdx.frontmatter.description}
-    thumbnail={
-      data.mdx.frontmatter.thumbnail?.childImageSharp.gatsbyImageData.images
-        .fallback.src
-    }
-    url={data.mdx.frontmatter.slug}
-  />
-)
+export const Head = ({ data }: any) => {
+  console.log(data)
+  return (
+    <Seo
+      title={data.mdx.frontmatter.title}
+      description={data.mdx.frontmatter.description}
+      thumbnail={
+        data.mdx.frontmatter.thumbnail?.childImageSharp.gatsbyImageData.images
+          .fallback.src
+      }
+      url={`/post${data.mdx.frontmatter.slug}`}
+    />
+  )
+}
 
 export default BlogPost
 
