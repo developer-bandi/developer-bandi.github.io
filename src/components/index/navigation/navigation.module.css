@@ -1,25 +1,29 @@
-.container {
-}
-
 .wrapper {
   display: flex;
   margin: 0 0 30px 0;
   padding: 0;
+  gap: 10px;
+  overflow: auto;
 }
 
 .content {
   list-style: none;
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 500;
   color: rgba(6, 11, 17, 0.48);
   padding: 10px 20px;
   margin: 0;
   cursor: pointer;
+  white-space: nowrap;
+  background-color: #eaeaea;
+  border-radius: 20px;
   &:hover {
-    color: black;
+    background-color: black;
+    color: white;
   }
 }
 
 .contentSelected {
-  color: black;
+  background-color: black;
+  color: white;
 }
