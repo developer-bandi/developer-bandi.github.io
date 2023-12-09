@@ -1,0 +1,26 @@
+.container {
+  margin-top: 100px;
+}
+
+.title {
+  font-size: 32px;
+}
+
+.repositoryListWrap {
+  list-style: none;
+  padding-left: 0px;
+}
+
+.repositoryTitle {
+  font-size: 24px;
+}
+
+.contributeListWrap {
+  padding: 0;
+}
+
+.contributeItem {
+  list-style-type: disc;
+  padding: 0 0 0 5px;
+  margin: 0 0 0 20px;
+}

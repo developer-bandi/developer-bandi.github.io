@@ -5,6 +5,7 @@ import Footer from "../common/footer/footer"
 import * as styles from "./page.module.css"
 import Introduce from "./introduce/introduce"
 import Careers from "./careers/careers"
+import OpenSource from "./openSource/openSource"
 
 const Page = () => {
   React.useEffect(() => {
@@ -19,6 +20,7 @@ const Page = () => {
       <main className={styles.container}>
         <Introduce />
         <Careers />
+        <OpenSource />
       </main>
       <Footer />
     </>
