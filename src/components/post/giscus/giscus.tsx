@@ -7,7 +7,7 @@ export default function Giscus() {
   return (
     <div className={styles.container}>
       <GiscusApp
-        repo="puki4416/blog"
+        repo="developer-bandi/developer-bandi.github.io"
         repoId="R_kgDOKZu-Pg"
         category="Announcements"
         categoryId="DIC_kwDOKZu-Ps4CZz3Z"
