@@ -1,26 +1,28 @@
 .title {
-  font-size: 32px;
+  font-size: 40px;
 }
 
 .listWrap {
   list-style: none;
   padding-left: 0px;
-  border-top: 1px solid #eaeaea;
+
 }
 
-.listWrap li {
-  padding: 24px;
-  border-bottom: 1px solid #eaeaea;
+.listHeader{
   display: flex;
+  gap: 10px;
   align-items: center;
-  gap: 30px;
+  h3{
+    font-size:24px
+  }
 }
-
-.listWrap strong {
-  font-size: 20px;
-  font-weight: 800;
-}
-
-.listWrap div {
-  color: rgb(107, 114, 128);
+.listContents{
+  margin:0;
+  padding-left: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  li{
+    font-size: 18px;
+  }
 }

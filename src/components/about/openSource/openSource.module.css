@@ -3,7 +3,7 @@
 }
 
 .title {
-  font-size: 32px;
+  font-size: 40px;
 }
 
 .repositoryListWrap {
@@ -17,10 +17,21 @@
 
 .contributeListWrap {
   padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap:4px;
 }
 
 .contributeItem {
   list-style-type: disc;
   padding: 0 0 0 5px;
   margin: 0 0 0 20px;
+  font-size: 18px;
+  a{
+    color:black;
+  }
+  a:hover{
+    color:skyblue;
+  }
 }
+
