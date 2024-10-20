@@ -26,10 +26,10 @@ const OpenSource = () => {
 //   .then(data => {
     
 
-//     const a = data.items.reduce((prev,{repository_url,title,pull_request:{url}})=>{
+//     const a = data.items.reduce((prev,{repository_url,title,html_url})=>{
 //       const element = {
 //         title,
-//         url
+//         url:html_url
 //       }
 
 //       if(prev[repository_url] !== undefined){

@@ -1,0 +1,200 @@
+---
+title: "Redux Deep Dive 2. dispatch가 UI에 반영되기까지"
+date: "2024-10-24T21:09:18.164Z"
+description: "React와 Middleware를 사용하지 않는 가장 간단한 형태의 redux를 분석해봅니다."
+category: "기술아티클"
+estimation: 15
+thumbnail: "./thumbnail.png"
+slug: "/redux-deep-dive-2"
+---
+
+Redux Deep Dive 시리즈의 두번째 아티클에서는 React와 Middleware를 사용하지 않는 가장 간단한 형태의 Redux를 분석해볼것입니다. React와 Middleware가 배제되는 만큼 Redux의 핵심부분을 집중적으로 살펴볼 수 있을것입니다.
+
+## dispatch에서 view까지
+
+가장 먼저 살펴볼 내용은 **action과 함께 실행한 dipatch가 내부적으로 어떤 과정을 거쳐서 view에 반영되는지** 입니다. Redux를 많이 사용해보셨다고 하더라도 보통 React와 같은 UI라이브러리와 함께 사용하지, 바닐라 자바스크립트와 함께 사용하지는 않기 때문에, 간단한 카운터 예제를 통해 바닐라 자바스크립트와 함께 Redux를 사용하는 방법을 살펴보겠습니다.
+
+```javascript
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Redux basic example</title>
+  </head>
+  <body>
+    <div>
+      <p>
+        Clicked: <span id="value">0</span> times
+        <button id="increment">+</button>
+        <button id="decrement">-</button>
+      </p>
+    </div>
+    <script type="module">
+      import { createStore } from "https://unpkg.com/redux@latest/dist/redux.browser.mjs";
+      const initialState = {
+        value: 0
+      };
+
+      function counterReducer(state = initialState, action) {
+        switch (action.type) {
+          case "counter/incremented":
+            return { ...state, value: state.value + 1 };
+          case "counter/decremented":
+            return { ...state, value: state.value - 1 };
+          default:
+            return state;
+        }
+      }
+
+	  // reducer를 넘겨 스토어 생성
+      const store = createStore(counterReducer);
+
+	  // 스토어의 상태를 가져온뒤 필요한 값을 꺼내 view에 반영합니다.
+      function render() {
+        const state = store.getState();
+        document.getElementById("value").innerHTML = state.value.toString();
+      }
+
+      // 초기값으로 렌더링합니다.
+      render();
+
+	  // 이후의 렌더링은 스토어가 변경될때마다 실행됩니다.
+      store.subscribe(render);
+
+      // increment 버튼을 클릭할 경우 "counter/incremented" 타입의 액션이 실행됩니다.
+      document
+        .getElementById("increment")
+        .addEventListener("click", function () {
+          store.dispatch({ type: "counter/incremented" });
+        });
+
+	  // decrement 버튼을 클릭할 경우 "counter/decremented" 타입의 액션이 실행됩니다.
+      document
+        .getElementById("decrement")
+        .addEventListener("click", function () {
+          store.dispatch({ type: "counter/decremented" });
+        });
+    </script>
+  </body>
+</html>
+```
+
+먼저 비즈니스 로직이 포함된 `reducer`함수를 `createStore`함수에 넘겨 실행함으로써 `store`를 생성합니다. 다음으로는 `subscribe`함수를 이용해 `render`함수가 `store`를 구독하도록 합니다. 이후에는 버튼의 이벤트 핸들러 함수에 `dispatch`함수의 실행을 명시해두었기에 사용자가 버튼을 누르면 누른 버튼에 맞는 액션을 담아 `dispatch`함수가 실행됩니다. 실제로 코드를 복사해서 실행해보면 버튼을 누를때마다 증가 혹은 감소하는것을 확인할 수 있을것입니다.
+
+이를 통해 **`dispatch`함수를 실행할때마다 `reducer`함수가 실행되어 액션에 맞는 동작을 수행한뒤 `store`를 변경하고 이후 `render`함수가 실행되어 `getState`함수가 항상 최신의 상태를 반환한다**는것을 추측해볼 수 있습니다. `createStore`함수를 분석해보면서 이 추측을 코드레벨에서 증명해보겠습니다.
+
+### createStore 함수 분석
+
+주석, 오류검사, 예외처리, Store Enhancer, Observable과 같은 부수적인 기능을 제거한 `createStore`함수는 다음과 같습니다.
+
+```javascript
+function createStore(reducer) {
+  let state
+  const listeners = []
+  let isDispatching = false
+
+  function getState() {
+    return state
+  }
+
+  function subscribe(listener) {
+    const listenerId = listeners.length
+    let isSubscribe = true
+    listeners.push(listener)
+    return function unsubscribe() {
+      if (!isSubscribe) return
+      isSubscribe = false
+      listeners.splice(listenerId, 1)
+    }
+  }
+
+  function dispatch(action) {
+    state = reducer(state, action)
+
+    listeners.forEach(listener => listener())
+  }
+
+  dispatch({ type: "INITIAL_ACTION" })
+
+  return { dispatch, subscribe, getState }
+}
+```
+
+`createStore`함수는 상태, 리스너, 디스패치 여부를 판단하는 세가지 변수와 리턴하는 `getState`, `subscribe`, `dispatch` 라는 세가지 함수로 구성되어 있습니다. 변수들은 모두 리턴하는 함수내에서 사용되기에 세가지 함수만 이해하면 `createStore`함수를 이해할수 있습니다.
+
+`getState`함수는 현재 상태를 반환하며 `subscribe`함수는 인자로 들어온 리스너를 목록에 추가하고, 구독을 해제하는 함수를 반환하는 기본적인 구독함수의 역할을 하고있습니다.
+
+가장 중요한 함수는 `dispatch`함수입니다. 상태를 리듀서 함수를 실행한 결과로 변경하고(`state = reducer(state, action)`) 모든 리스너를 실행하는(`listeners.forEach(listener => listener())`) 간단한 로직으로 되어있습니다. 따라서 `dispatch`함수를 실행하면 `subscribe`함수를 통해 넘긴 콜백함수가 실행되므로 앞서 우리가 추측한 **`dispatch`함수를 실행할때마다 `reducer`함수가 실행되어 액션에 맞는 동작을 수행한뒤 `store`를 변경하고 이후 `render`함수가 실행되어 `getState`함수가 항상 최신의 상태를 반환하였다**가 올바른 추측이었음을 알 수 있습니다.
+
+또한 추가적으로 살펴보면 좋은 사실은 **`reducer`함수내에서 비동기 작업을 통해 상태를 생성할 경우 `dispatch`함수는 이를 전파하지 않는다**는것입니다. 왜냐하면 리스너를 실행하는 로직은 `reducer`함수의 비동기 실행을 기다려주지 않기 때문에 `reducer`함수가 비동기 로직을 실행하는 도중에 리스너가 실행되기 때문입니다. 따라서 해당 리스너함수에서 실행한 `getState`함수는 비동기 실행의 결과가 반영된 상태가 아닌 이전 상태를 받게되어 의도치 못한 결과를 얻을수 있으므로 `reducer`함수 내부에서는 비동기 로직을 사용하면 안됩니다. 그럼에도 `reducer`함수 실행시 비동기 작업이 필요하다면 미들웨어를 이용해야합니다.
+
+## combineReducer가 action에 맞는 reducer 함수를 선택하는 방법
+
+하나의 `reducer`함수를 사용하다보면 다양한 논리들이 포함되어 복잡해지므로 결국 관심사에 따라 `reducer`함수를 분리하게됩니다. 분리된 `reducer`함수는 다시 합쳐야 Redux에서 `reducer`함수로 사용할 수 있으므로 이를 위해 `combineReducers`함수를 사용합니다. `combineReducers`함수는 인자로 객체를 받는데 객체 내부에 원하는 이름을 키로 하여 `reducer`함수를 넣어주면 됩니다. 이후 store를 조회하면 각 키에 입력된 `reducer`함수가 적용된 결과가 저장되어 있음을 확인할수 있습니다.
+
+```javascript
+// reducers.js
+export default theDefaultReducer = (state = 0, action) => state
+
+export const firstNamedReducer = (state = 1, action) => state
+
+export const secondNamedReducer = (state = 2, action) => state
+
+// rootReducer.js
+import { combineReducers, createStore } from "redux"
+
+import theDefaultReducer, {
+  firstNamedReducer,
+  secondNamedReducer,
+} from "./reducers"
+
+const rootReducer = combineReducers({
+  theDefaultReducer,
+  firstNamedReducer,
+  secondNamedReducer,
+})
+
+const store = createStore(rootReducer)
+console.log(store.getState()) // {theDefaultReducer : 0, firstNamedReducer : 1, secondNamedReducer : 2}
+```
+
+이때 생기는 궁금증은 **Redux는 dispatch함수를 실행할때 넘기는 action에 맞는 reducer함수를 어떻게 찾아내서 실행하는가**입니다. `combineReducer`함수를 분석하여 답을 찾아보겠습니다.
+
+### combineReducers 함수 분석
+
+```javascript
+export default function combineReducers(reducers) {
+  return function combination(state: State = {}, action: Action) {
+    const reducerKeys = Object.keys(reducers)
+    let hasChanged = false
+    const nextState: State = {}
+
+    for (let i = 0; i < reducerKeys.length; i++) {
+      const key = reducerKeys[i] // 현재 reducer key ex) "theDefaultReducer"
+      const reducer = reducerKeys[key] // 현재 reducer 함수 ex)  theDefaultReducer Fn
+      const previousStateForKey = state[key] // 현재 key에 해당하는 상태 ex) 0
+      const nextStateForKey = reducer(previousStateForKey, action) // 새로운 상태 생성
+      nextState[key] = nextStateForKey
+      hasChanged = hasChanged || nextStateForKey !== previousStateForKey
+    }
+
+    return hasChanged ? nextState : state
+  }
+}
+```
+
+`combineReducers`함수가 반환하는 것이 `combination`함수이며 이 함수가 곧 합쳐진 `reducer`함수입니다. `dispatch`함수를 실행하면 `combination`함수가 실행될것이므로 `combination` 함수 내부를 살펴보면, for 문에서 들어온 액션에 따라 특정 `reducer`함수를 선택해서 실행하는것이 아니라, 모든 `reducer`함수를 실행함으로써 마치 인자로 들어온 액션을 처리하는 `reducer`함수를 선택해 실행한것처럼 동작하고 있음을 확인할 수 있습니다.
+
+한가지 더 살펴보면 좋을것은 `combination`함수가 `hasChanged`에 따라 변경된 상태가 아닌 이전 상태를 리턴할수도 있다는것입니다. `hasChanged`는 `nextStateForKey`와 `previousStateForKey`가 다를때, 즉 새로운 상태가 생성되었을때 `true`로 바뀌게 되므로 리듀서가 매번 새로운 객체를 생성하지 않으면(상태를 불변하게 관리하지 않으면) 이전 상태가 반환될것입니다.
+
+여기서 중요한 사실은 `redcuer`함수에서 변경된 상태가 적용된 새로운 객체를 반환하지 않고 이전 상태 객체를 수정한뒤 리턴함으로써 상태의 불변성을 지키지 않더라도 UI에서는 새로운 상태를 받아볼 수 있다는 것입니다. 이유는 앞서 살펴본것처럼 `reducer`함수의 반환값이 그대로 상태에 반영되기 때문입니다. 따라서 널리 알려진것과는 다르게 Redux에서 상태의 불변성을 지키지 않아도 UI에 변경한 상태가 반영될 수 있기에 문제가 발생하지 않는것 처럼 보입니다.
+
+하지만 일반적으로 Redux에서 상태를 불변으로 관리하지 않으면 의도한대로 동작하지 않기 때문에 불변성을 지키지 않았을때 문제가 생기는 이유가 다른 곳에 있음을 알 수 있습니다. 이는 다음 아티클에서 살펴볼 것이므로 지금은 **redux를 react, middleware없이 사용할때 불변성을 지키지 않더라도 동작에는 문제가 없다** 정도로 이해해두시면 좋겠습니다.
+
+## 마치며
+
+이번 시리즈에서는 Redux의 `createStore`함수와 `combineReducer`함수를 분석하면서 Redux의 기본 기능들이 어떻게 동작하는지 살펴보았습니다. Redux 라이브러리 자체는 코드량이 많지않고 간단하다보니 생각보다는 어렵지 않으셨을것입니다.
+다음 시리즈에서는 난이도를 조금 올려 이번 아티클에서 다룬 Redux 모델에 React를 추가하였을때의 동작을 살펴보겠습니다.
+
+## 참고자료
+
+[Redux 톺아보기](https://goidle.github.io/redux/in-depth-redux/)
