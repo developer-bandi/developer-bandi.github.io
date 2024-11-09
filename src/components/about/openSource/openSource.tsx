@@ -2,7 +2,7 @@ import * as React from "react"
 import * as styles from "./openSource.module.css"
 import data from "./constant"
 const OpenSource = () => {
-//   const [list,setList] = React.useState({})
+  const [list,setList] = React.useState({})
 //   React.useEffect(()=>{
 //     const username = "developer-bandi";  // GitHub 사용자 이름
 // const token = ""; // 발급받은 Personal Access Token
@@ -24,15 +24,13 @@ const OpenSource = () => {
 //     return response.json();  // JSON 형태로 변환
 //   })
 //   .then(data => {
-    
-
-//     const a = data.items.reduce((prev,{repository_url,title,html_url})=>{
+//     const a = data.items.reduce((prev,{repository_url,title,html_url,pull_request})=>{
 //       const element = {
 //         title,
 //         url:html_url
 //       }
-
-//       if(prev[repository_url] !== undefined){
+      
+//       if(prev[repository_url] !== undefined && pull_request?.merged_at){
 //         prev[repository_url].push(element)
 //       }
 
@@ -65,11 +63,11 @@ const OpenSource = () => {
           const repoName = key.split("/")[key.split("/").length-1]
 
           return (
-<li className={styles.repositoryItem}>
+<li className={styles.repositoryItem} key={repoName}>
           <h3 className={styles.repositoryTitle}>{repoName}</h3>
           <ul className={styles.contributeListWrap}>
             {value.map(({title,url})=>{
-            return (<li className={styles.contributeItem}>
+            return (<li className={styles.contributeItem} key={url}>
             <a href={url}>
               {title}
             </a>
