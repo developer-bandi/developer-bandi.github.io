@@ -70,12 +70,12 @@ export function useForm<
 ```
 첫번째 항목을 보면 `useForm`에서 `_formControl`과 `formState`라는 두개의 값을 관리하고 있으며, `_formControl`에 `createFormControl`의 실행결과와 `formState`를 넣어주고 있음을 확인할 수 있습니다. 이때 `if(!_formControl.current)` 코드로 인해 처음 마운트시에만 할당된다는점도 짚고 넘어가면 좋겠습니다. 왜냐하면 이로인해 `createFormControl`는 마운트시 단 한번만 실행되기 때문입니다.
 
-두번째 항목을 보면 `formState`를 `control._subjects.state` subject의 구독을 받도록 하고 있음을 확인할 수 있습니다. 즉 `formState`는 `useForm`에서 단독으로 변경되는것이 아니라 `formControl`의 `state`가 변경되어야 같이 변경될 수 있습니다. 
+두번째 항목을 보면 `formState`가 `control._subjects.state`의 구독을 받도록 하고 있음을 확인할 수 있습니다. 즉 `formState`는 `useForm`내부에서 직접 변경되는것이 아니라 `formControl`의 `state`를 구독하는 값임을 알 수 있습니다.
 
 세번째 항목을 보면 `_formControl.current`를 반환하고 있습니다. 이를 통해 주요 메서드들이 `createFormControl`의 실행결과에 들어있음을 알 수 있습니다.
 
 ## createformControl
-`createFormControl`를 실행하면 여러 메서드들이 존재하는 객체가 반환됩니다. 이 메서드를 이용해 `formControl` 내부의 상태를 조작하거나 꺼내어 사용하기도 합니다. 따라서 우리가 추후 `register`등의 메서드 동작을 이해하려면 객체 내부에 선언된 변수를 잘 이해하고 있어야 합니다. 
+`createFormControl`를 실행하면 여러 메서드들이 존재하는 객체가 반환됩니다. 이 메서드를 이용해 `formControl` 내부의 상태를 조작하거나 꺼내어 사용하기도 합니다. 따라서 추후 `register`등의 메서드 동작을 이해하려면 해당 메서드들이 사용하는 `createFormControl` 내부에 선언된 변수를 잘 이해하고 있어야 합니다. 
 
 ```typescript
 // 1. 옵션값
@@ -166,7 +166,8 @@ const _subjects: Subjects<TFieldValues> = {
 아홉번째 항목은 `_subjects`입니다. 내부적으로 관리하는 값인 `values`, `array`, `state` 세가지 subject를 가지고 있습니다.
 
 ## debounce 이해하기
-debounce란, 일정시간동안 해당함수가 재호출되지않아야 해당 함수가 실행되도록 하는것을 의미합니다. 보통 폼을 제출하거나, 자동완성을 수행할때 너무많은 api호출이 발생하지 않도록 처리할때 사용하게됩니다. RHF내부에서도 이를 위한 간단한 로직이 존재하는데, 한번 살펴보겠습니다.
+debounce란, 일정시간동안 해당함수가 재호출되지않아야 해당 함수가 실행되도록 하는것을 의미합니다. 보통 폼을 제출하거나, 자동완성을 수행할때 너무많은 api호출이 발생하지 않도록 처리할때 사용하게됩니다. 일반적으로 lodash와 같은 라이브러리의 debounce를 사용하겠지만 `useForm`에서는 직접 만들어 사용하고있습니다.
+
 ```typescript
 let timer = 0;
 
@@ -177,18 +178,17 @@ const debounce =
     timer = setTimeout(callback, wait);
   };
 ```
-일반적으로 lodash와 같은 라이브러리의 디바운스를 사용하겠지만 RHF에서는 직접 만들어 사용하고있습니다.
 
 먼저 debounce는 실행할 콜백함수를 넘기면 함수가 실행되고, 이를 지연할 시간만큼 넣어서 실행하면 timer에 setTimeout을 건 타이머를 저장합니다. 이후 콜백을 넘겨 실행한 함수를 재실행하지 않는다면 콜백이 실행되고 그렇지 않으면 타이머가 다시 생성됩니다.
 
-RHF에서 debounce를 사용하는 경우는 delayError를 위해서입니다. delayError는 에러 발생시 결과 통보를 지연시키는것인데, 에러가 발생하면 이를 디바운스 처리해 delayErrorCallback에 담아두고 일정시간동안 에러가 발생하지 않을때 이를 제출하게됩니다.
+`useForm`에서 debounce를 사용하는 경우는 `delayError`를 위해서입니다. `delayError`는 에러 발생시 결과 통보를 지연시키는것인데, 에러가 발생하면 이를 디바운스 처리해 `delayErrorCallback`에 담아두고 일정시간동안 에러가 발생하지 않을때 이를 제출하게됩니다.
 
 ## formState에서 사용하는 필드가 변경될때만 리렌더링하는 useForm
-앞서 `formControl`의 변수를 분석할때 넘어갔었던 `_proxyFormState`이 어떤 역할을 하는것인지 살펴보겠습니다.
+앞서 `formControl`의 변수를 분석할때 넘어갔었던 `_proxyFormState`에 대해서 살펴보겠습니다.
 
 일반적으로 `useForm`을 사용할때는 `formState`의 값을 사용하지만 모든 프로퍼티를 사용하는 경우는 거의 없습니다. 보통 `errors`, `isValid` 정도는 많이 사용하지만, `isDirty`, `touchedFields`등의 `formState`는 특수한 상황에서만 사용하게됩니다. 
 
-React에서 해당 값의 정확성을 보장하기 위해서는 해당 값이 변경될때 항상 리렌더링을 해주어야하는데, 문제는 `formState`의 값들이 변경되는 시점이 달라서 `formState`의 모든 프로퍼티가 변경될때마다 리렌더링을 발생시키면 거의 제어컴포넌트 수준으로 리렌더링이 발생할수 있다는 점입니다. 예를들어 `errors`가 변경되더라도 `isValid`는 변경되지 않을수 있는데, `isValid`만 사용중이더라도 리렌더링이 발생합니다.
+React에서 해당 값을 보장하기 위해서는 해당 값이 변경될때 항상 리렌더링을 해주어야하는데, 문제는 `formState`의 값들이 변경되는 시점이 달라서 `formState`의 모든 프로퍼티가 변경될때마다 리렌더링을 발생시키면 거의 제어컴포넌트 수준으로 리렌더링이 발생할수 있다는 점입니다. 예를들어 `errors`가 변경되더라도 `isValid`는 변경되지 않을수 있는데, `isValid`만 사용중이더라도 리렌더링이 발생합니다.
 
 이러한 문제를 해결하기 위해서 RHF에서는 `formState`에 프록시를 적용하여 현재 사용중인 프로퍼티가 변경되었을때만 리렌더링이 발생하도록 하고 있습니다. 예를 들어 아래와 같은 코드에서는 `isValid`가 변경될때만 리렌더링이 일어나고, `errors`가 변경되었을때는 리렌더링이 발생하지 않습니다.
 
@@ -204,10 +204,10 @@ export default function App() {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
-      <input {...register("exampleRequired", { required: true })} />
+    <input {...register("exampleRequired", { required: true })} />
 	  <input {...register("exampleMin", { min: 5 })} />
-      {isValid ? <span>입력값이 모두 유효합니다</span> : <span>유효하지 않은 입력값이 있습니다</span>}
-      <input type="submit" />
+    {isValid ? <span>입력값이 모두 유효합니다</span> : <span>유효하지 않은 입력값이 있습니다</span>}
+    <input type="submit" />
     </form>
   )
 }
@@ -283,7 +283,7 @@ export default <TFieldValues extends FieldValues, TContext = any>(
 ```
 `formState`객체의 모든 프로퍼티에 get 프록시를 적용하는 함수입니다. 프록시로 어떤 역할을 하는지 살펴보기에 앞서서 프록시 자체에 대한 이해가 필수적이므로 프록시에 대해서 간략하게 이야기해보겠습니다.
 
-프록시는 특정 객체를 감싸 프로퍼티 읽기, 쓰기와 같은 객체에 가해지는 작업을 중간에서 가로채는 객체를 말합니다. 예를들어 객체에 특정값을 할당할때 값을 검사하여 값을 할당하거나, 값을 조회할때 로거를 달수도있습니다. 현재 자바스크립트에서는 이를 위한 [Proxy](https://ko.javascript.info/proxy) 내장 객체가 있지만 최근에 추가된 문법이기 때문에 기본적으로 get과 set에 대한 프록시는 [defineProperty](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/defineProperty) 함수를 사용하게됩니다. RHF도 하위호환성을 위해 `defineProperty`를 사용하였으며 `Proxy`와의 차이는 전체 객체에 적용하느냐, 개별 프로퍼티에 적용하느냐 정도의 차이로 이해해주시면 되겠습니다. 더 세부적인 차이가 궁금하시다면 링크를 참고해보세요.
+프록시는 특정 객체를 감싸 프로퍼티 읽기, 쓰기와 같은 객체에 가해지는 작업을 중간에서 가로채는 객체를 말합니다. 예를들어 객체에 특정값을 할당할때 값을 검사하여 값을 할당하거나, 값을 조회할때 로거를 달수도있습니다. 현재 자바스크립트에서는 이를 위한 [Proxy](https://ko.javascript.info/proxy) 내장 객체가 있지만 최근에 추가된 문법이기 때문에 기본적으로 get과 set에 대한 프록시는 [defineProperty](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/defineProperty) 함수를 사용하게됩니다. `useForm`에서도 하위호환성을 위해 `defineProperty`를 사용하였으며 `Proxy`와의 차이는 전체 객체에 적용하느냐, 개별 프로퍼티에 적용하느냐 정도의 차이로 이해하면됩니다.
 
 이제 get 프로퍼티에 할당된 콜백함수 내부를 살펴보겠습니다. 해당 콜백함수가 호출될때마다 `control._proxyFormState`의 key 프로퍼티 값이  `VALIDATION_MODE.all`로 설정되지 않았다면 이것으로 설정해주고 원래 역할인 조회 결과를 반환합니다. 이렇게 하면 우리가 formState의 객체에서 어떤 프로퍼티를 꺼내어 사용하는지 control에서 알 수 있게 됩니다. 왜냐하면 사용하는 값은 `control._proxyFormState` 객체에서 동일한 이름의 프로퍼티 값이 `VALIDATION_MODE.all`로 변경되어있을것이기 때문입니다. 
 
@@ -306,7 +306,7 @@ const _updateValid = async (shouldUpdateValid?: boolean) => {
 ```
 함수 본문의 첫번째 라인에 있는 조건문을 살펴보면 `_proxyFormState.isValid`에 값이 있는지 여부를 먼저 검사합니다. 다만 `_proxyFormState.isValid`가 falsy한 값이더라도 `shouldUpdateValid`가 `true`이면 아래 로직을 실행하는데 이는 `shouldUpdateValid`가 예외조건이기 때문입니다. 따라서 일반적인 상황에서는 `_proxyFormState.isValid`의 값이 있을때만 아래 로직이 실행되고 `_subjects.state.next`가 실행되어 `isValid`의 변경점이 `useForm`에 전파됩니다.
 
-다만 여기서 `_subjects.state.next`를 통해서 상태를 업데이트 한다고 해서 `formState`에 바로 반영되는것은 아닙니다. 왜냐하면 `useForm`에서 state의 subject를 구독할때 제공하는 next콜백 함수₩에서 무조건 setState를 실행하지는 않기 때문입니다.
+다만 여기서 `_subjects.state.next`를 통해서 상태를 업데이트 한다고 해서 `formState`에 바로 반영되는것은 아닙니다. 왜냐하면 `useForm`에서 state의 subject를 구독할때 제공하는 next콜백 함수에서 무조건 setState를 실행하지는 않기 때문입니다.
 ```typescript
 useSubscribe({
   subject: control._subjects.state,
@@ -352,7 +352,7 @@ export default <T extends FieldValues, K extends ReadFormState>(
   );
 };
   ```
-반환에 사용되는 세가지 조건을 살펴보기에 앞서서 `formStateData`에서 `name`을 분리함을 볼 수 있습니다. 이는 formState에 name이 없기 때문입니다. 굳이 필요없는 `name`을 포함시킨 이유는 여기서 사용되지는 않지만, 이 업데이트를 발생시킨 필드가 누구인지 알 필요가 있는 경우가 있기 때문입니다.
+반환에 사용되는 세가지 조건을 살펴보기에 앞서서 `formStateData`에서 `name`을 분리함을 볼 수 있습니다. 이는 formState에 `name`이 없기 때문입니다. 굳이 필요없는 `name`을 포함시킨 이유는 여기서 사용되지는 않지만, 이 업데이트를 발생시킨 필드가 누구인지 알 필요가 있는 경우가 있기 때문입니다.
 
 첫번째 조건은 `formState`가 빈객체인지 여부입니다. 만약 빈객체 라면 `formStateData`에 `name`만 포함되어있거나  빈 객체인 경우입니다. 이때는 강제로 `formState`를 업데이트 하라는 플래그와 동일한 의미를 가집니다.
 
