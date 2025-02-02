@@ -1,0 +1,483 @@
+---
+title: "React-Hook-Form Deep Dive - 4. useForm(변경)"
+date: "2025-02-02T21:20:18.164Z"
+description: "React Hook Form의 가장 중요한 hook인 useForm의 onChange메서드를 중심으로 변경과정을 살펴봅니다."
+category: "기술아티클"
+estimation: 15
+thumbnail: "./thumbnail.png"
+slug: "/react-hook-form-deep-dive-4"
+---
+
+이번 장에서는 값이 변경될때 어떤일이 발생하는지 살펴보겠습니다. 
+
+앞서 등록을 살펴볼때 `register`메서드에서 반환하는 객체의 `onChange`프로퍼티에 `onChanage`메서드를 담아 반환하는것을 확인하였기에 `<input {...regitser("name")}/>` 와 같이 코드를 작성하면 필드의 값을 변경하였을때 change 이벤트가 발생하고 `onChange` 함수가 실행될것입니다. 
+
+따라서 이번 장에서는 `onChange`함수가 실행되는 과정을 따라가보면서 값을 변경하였을때 `formControl`내부에서는 어떤일이 발생하는지 알아보겠습니다.
+
+## 최상위 변수 및 함수
+`onChange`메서드를 살펴보면, 가장 상위에 변수와 함수들이 존재합니다. 주요 로직을 살펴보기 이전에 해당 변수들을 먼저 살펴보겠습니다. 
+
+```typescript
+// 1. _state.mount 상태 변경
+_state.mount = true;
+
+// 2. 필요 변수 확인
+const target = event.target;
+let name = target.name as string;
+const field: Field = get(_fields, name);
+
+// 3. isFieldValueUpdated 업데이트
+let isFieldValueUpdated = true;
+const _updateIsFieldValueUpdated = (fieldValue: any): void => {
+  isFieldValueUpdated =
+    Number.isNaN(fieldValue) ||
+    deepEqual(fieldValue, get(_formValues, name, fieldValue));
+};
+
+// 4. field에 담겨있는 value를 추출합니다.
+const getCurrentFieldValue = () =>
+  target.type ? getFieldValue(field._f) : getEventValue(event);
+```
+첫번째 항목에서는 `_state.mount`의 값을 `true`로 변경해주고 있습니다. 따라서 `_state.mount`가 `true`로 변경되는 시점은 실제 컴포넌트가 마운트 되는 시점이 아니라 사용자가 값을 입력하여 변경이 발생하는 시점임을 알 수 있습니다. 앞서 등록을 살펴볼때 해당값이 `true`로 변경되는 시점을 추후 알아본다고 하였었는데, 그시점이 바로 change 이벤트가 발생한 지금입니다.
+
+두번째 항목은 `event`객체에서 대상 요소를 꺼내 여기에 존재하는 이름을 기반으로 필드를 찾는 간단한 로직입니다. 앞서 많이 살펴본 로직이므로 이정도로 정리하고 넘어가겠습니다.
+
+세번째 항목은 `isFieldValueUpdated`변수와 이를 변경하는 함수인 `_updateIsFieldValueUpdated`입니다. 함수는 `isFieldValueUpdated`를 변경하는데, 이는 필드값이 변경되었는지 여부를 판단하는 값입니다. 조건으로는 `fieldValue`가 `NaN`이거나, 기존의 `_formValue`의 값과 같으면 `isFieldValueUpdated`를 `true`로 변경합니다. 왜 이러한 조건이 `fieldValue`가 업데이트 되었음을 의미하는지는 추후에 알 수 있을것입니다.
+
+네번째는 `getCurrentFieldValue` 함수입니다. 이 함수는 `target.type`이 있는 경우 `getFieldValue(field._f)`, 그렇지 않은 경우 `getEventValue(event)`를 실행합니다. `target.type`에 따라 분기되는 이유는, `getFieldValue`함수는 `target.type`에 따라 다른 방법을 적용해 값을 추출하고, `getEventValue`는 이벤트 객체에서 값을 꺼내기 때문입니다. 간단하게 두 함수를 살펴보겠습니다.
+
+```typescript
+export default function getFieldValue(_f: Field["_f"]) {
+  const ref = _f.ref;
+
+  // 1. disabled 상태이면 빈값 반환
+  if (_f.refs ? _f.refs.every((ref) => ref.disabled) : ref.disabled) {
+    return;
+  }
+
+  // 2. type="file" input인 경우 files 반환
+  if (isFileInput(ref)) {
+    return ref.files;
+  }
+
+  // 3. type="radio" input인 경우 getRadioValue 함수 호출후 value 반환
+  if (isRadioInput(ref)) {
+    return getRadioValue(_f.refs).value;
+  }
+
+  // 4. type="select-multiple" input인 경우 selectedOptions에서 value 꺼내어 반환
+  if (isMultipleSelect(ref)) {
+    return [...ref.selectedOptions].map(({ value }) => value);
+  }
+
+  // 5. type="checkbox" input인 경우 selectedOptions에서 value 꺼내어 반환
+  if (isCheckBox(ref)) {
+    return getCheckboxValue(_f.refs).value;
+  }
+  
+  // 6. type="text" input인 경우
+  return getFieldValueAs(isUndefined(ref.value) ? _f.ref.value : ref.value, _f);
+}
+
+function getFieldValueAs<T extends NativeFieldValue>(
+  value: T,
+  { valueAsNumber, valueAsDate, setValueAs }: Field["_f"]
+) {
+  return isUndefined(value)
+    ? value
+    : valueAsNumber
+    ? value === ""
+      ? NaN
+      : value
+      ? +value
+      : value
+    : valueAsDate && isString(value)
+    ? new Date(value)
+    : setValueAs
+    ? setValueAs(value)
+    : value;
+}
+```
+첫번째 항목을 살펴보면, `disabled`의 경우 빈값을 반환하도록 되어있습니다. 즉 `disabled`상태는 `ref`에 값이 있더라도 내부적으로는 값을 저장하지 않습니다.
+
+두번째 부터 네번째 항목의 경우 각각 파일, 라디오, 멀티셀렉트, 체크 박스에 대해 값을 추출하고 있습니다. 이러한 분기가 존재하는 이유는 이 항목들에 대해서는 값을 추출하는 방법이 다르기 때문입니다.
+
+다섯번째 항목의 경우 일반적인 텍스트 필드가 이에 해당할것입니다. 이경우 `getFieldValueAs`함수를 호출한 결과를 반환하는데, 이 함수를 살펴보면, `valueAsNumber`, `valueAsDate`, `setValueAs`의 옵션을 적용합니다. 이 옵션들은 값을 숫자나 날짜 혹은 커스텀 함수를 적용한 결과로 저장하도록 하는것입니다.
+
+```typescript
+export default (event: unknown) =>
+  isObject(event) && (event as Event).target
+    ? isCheckBoxInput((event as Event).target)
+      ? // checkbox는 checked가 값
+        (event as Event).target.checked
+      : // 그외는 value가 값
+        (event as Event).target.value
+    : event;
+
+```
+`getEventValue` 함수는 간단합니다. 체크박스의 경우에만 `target`에서 `checked`를 값으로 선택하고 그이외에는 모두 `value`를 값으로 선택합니다.
+
+## 조건문 내부 변수
+이제 if문 내부로 들어가 변수들을 살펴보겠습니다. 들어가기에 앞서서 이 조건문이 존재하는 이유에 대해 간략하게 살펴보고 넘어가겠습니다. 일반적인 상황에서는 필드가 없을수 없지만, `register`메서드를 외부에서 실행한뒤 `register`메서드 실행시 입력한 `name`과 다른 요소에 `register` 메서드의 결과를 담는 경우 필드가 없을수 있습니다.
+
+```typescript
+const {onChange} = register("test")
+
+const App = <input name="noop" onChange={onChange}/>
+
+```
+따라서 일반적인 상황에서 이 조건문이 else문으로 이동할 일은 없습니다.
+
+```typescript
+// 1. 사용변수
+let error;
+let isValid;
+const fieldValue = getCurrentFieldValue();
+// 함수이름이 onChange이지만 onBlur에도 사용되므로 구분 필요
+const isBlurEvent =
+  event.type === EVENTS.BLUR || event.type === EVENTS.FOCUS_OUT;
+
+// 2. validation 스킵 조건
+const shouldSkipValidation =
+  (!hasValidation(field._f) &&
+    !_options.resolver &&
+    !get(_formState.errors, name) &&
+    !field._f.deps) ||
+  skipValidation(
+    isBlurEvent,
+    get(_formState.touchedFields, name),
+    _formState.isSubmitted,
+    validationModeAfterSubmit,
+    validationModeBeforeSubmit
+  );
+
+// 3. 현재 필드가 watch 상태인지 확인
+const watched = isWatched(name, _names, isBlurEvent);
+
+// 4. _formValues에 값 설정.
+set(_formValues, name, fieldValue);
+
+// 5. register 등록시 옵션으로 넘긴 onBlur, onChange 이벤트 핸들러를 현재 발생한 이벤트에 맞게 실행해줍니다.
+if (isBlurEvent) {
+  field._f.onBlur && field._f.onBlur(event);
+  delayErrorCallback && delayErrorCallback(0);
+} else if (field._f.onChange) {
+  field._f.onChange(event);
+}
+
+// 6. updateTouchAndDirty
+const fieldState = updateTouchAndDirty(name, fieldValue, isBlurEvent, false);
+
+// 7. shouldRender
+const shouldRender = !isEmptyObject(fieldState) || watched;
+
+// 8. blur 이벤트는 포커스를 잃을때 동작하므로 값이 변경되지 않지만, change 이벤트인 경우 실질적으로 값이 변경되므로 values를 업데이트 해줍니다.
+!isBlurEvent &&
+  _subjects.values.next({
+    name,
+    type: event.type,
+    values: { ..._formValues },
+  });
+
+// 9. validation을 패스한다면, 아래 라인을 실행하지 않아도 되므로 조기 반환합니다. 이때 렌더링이 꼭 필요하다면 state도 업데이트 합니다.
+if (shouldSkipValidation) {
+  if (_proxyFormState.isValid) {
+    if (props.mode === "onBlur") {
+      if (isBlurEvent) {
+        _updateValid();
+      }
+    } else {
+      _updateValid();
+    }
+  }
+
+  return (
+    shouldRender &&
+    _subjects.state.next({ name, ...(watched ? {} : fieldState) })
+  );
+}
+
+// 10. blur 이벤트가 아니고(change 이벤트이고), 현재 필드가 watched 상태이면 state를 업데이트 합니다.
+!isBlurEvent && watched && _subjects.state.next({ ..._formState });
+```
+첫번째 항목은 사용변수입니다. 내부적으로 사용할 변수들을 선언합니다. error는 `{ "test":"값을 20자 미만으로 입력해주세요"}` 와 같은 에러 객체, `isValid`는 현재 폼의 값이 유효한지의 여부, `fieldValue`에는 앞서 살펴본 `getCurrentFieldValue` 함수를 사용하여 요소의 값을 담습니다. `isBlurEvent`는 블러 이벤트 여부입니다. 메서드 이름이 `onChange`이지만, `onBlur`에도 사용되기 때문에 추후 분기를 위해 사용합니다.
+
+두번째 항목은 유효성검사를 스킵하는 조건입니다. 크게 `||`를 기준으로 두가지로 나눌수 있습니다. 첫번째 조건을 살펴보면 `option`에 `min`,`max`같은 native 로직이 포함되있는지 확인하는 `hasValidation` 가 `false`이면서 `resolver`, `errors`, `deps`모두 없다면 굳이 유효성 검사를 할필요가 없습니다. 유효성 검사에 필요한 어떠한 정보도 제공하지 않았기 때문입니다. 두번째는 `skipValidation`함수를 실행합니다. 이 함수의 실행결과가 true일때만 
+
+세번째 항목은 현재 필드가 `watch`상태인지 확인합니다. 해당 함수를 살펴보면 좋지만, 간단하게 정리하면, change이벤트이면서, 모든 필드가 watch상태이거나, 혹은 현재 필드가 watch상태일때거나 상위 이름이 watch상태이면 이를 watch로 인정합니다.
+
+네번째 항목은 `_formValues`에 `fieldValue`를 설정합니다. 따라서 이 시점이후에는 `_formValeus`에 `fieldValue`가 설정되어있으므로 폼이 `ref`에 입력된 값을 알고있게됩니다. `onChange`메서드가 수행하는 간단하지만 가장 중요한 기능이 되겠습니다.
+
+다섯번째 항목은 이벤트에 따라서 `register`메서드 실행시 옵션으로 넘긴 `onBlur` 혹은 `onChange` 이벤트 핸들러를 현재 발생한 이벤트에 맞게 실행해주는 코드입니다. 다만 이때 `blur`이벤트가 발생하면 `delayErrorCallback`함수를 실행하는 코드가 있습니다. 이 함수는 에러를 지연시킬경우 이를 `debounce`처리해둔 함수입니다. `delayErrorCallback`에 함수를 설정하는 부분은 아래에서 확인할수 있습니다. 여기서`blur`이벤트에만 이러한 로직이 존재하는 이유는 `change`이벤트와 달리 `blur`이벤트만 발생하였을때는 값이 변경되지 않기때문에 에러가 있었다면 그 에러가 계속 유지되므로 에러가 있다면 그대로 발생시키는 것입니다.
+
+여섯번째 항목은 `updateTouchAndDirty`함수를 실행해 `touched`와 `dirty`를 업데이트한뒤, 업데이트된 `state`를 반환하는 함수입니다. 특별히 중요한 동작은 없으므로 함수내부를 살펴보지는 않겠습니다.
+
+일곱번째 항목은 `shouldRender`변수입니다. 변경될 `fieldState`가 있거나 없더라도 `watched`가 있으면 강제 업데이트를 수행합니다.
+
+여덟번째 항목은 `blur`이벤트가아닌경우 즉, `change`이벤트에만 `values`를 업데이트 해주는 로직입니다. `change`이벤트에만 이를 업데이트 해주는 이유는 `blur`이벤트는 포커스를 잃을때 동작하므로 값이 변경되지 않지만, `change`이벤트는 값이 변경될때 발생하기 때문입니다.
+
+아홉번째 항목은 유효성검사를 스킵하는경우에 수행하는 로직입니다. 다음 라인에서 유효성검사를 수행한다는 사실을 기억하면서 코드를 살펴봅시다. 먼저 `isValid`를 사용하는 경우 `isValid`를 업데이트하고 렌더링이 필요한경우 `state`의 업데이트를 전파하게 됩니다. 이때 `watched`상태이면 `name`프로퍼티만 전파하는것을 볼수 있는데,  앞서 살펴본적이 있던것처럼 강제 업데이트(무조건 리렌더링)을 의미합니다. 만약 `watched`상태가 아니라면 `fieldState`를 전달하는데, 이때는 변경된 필드가 있을때만 리렌더링이 발생합니다.
+
+열번째 항목은 `blur`이벤트가 아니고, `watch`상태라면 `formState`를 곧바로 업데이트합니다. 왜냐하면 `watch`상태는 필드의 값이 변경되면 반드시 업데이트를 시켜주어야하기 때문입니다.
+
+## validation 수행
+여기부터는 변경에서 두번째로 중요한(첫번째로 중요한 작업은 폼에 값을 저장하는것이었습니다.) 유효성 검사를 수행하는 방식을 살펴볼것입니다. 
+
+RHF을 사용해보셨다면 아시겠지만, RHF에서 유효성 검사를 수행하는 방법은 크게 두가지입니다. `register`메서드의 `option`으로 `min`, `max`등의 네이티브 프로퍼티를 넘기거나, 조금더 복잡한 유효성 검사가 필요한 경우 `resolver`옵션에 커스텀 `resovler`를 넘겨 수행하게됩니다. 
+
+분기문에 의해 두가지 케이스가 분리되어 실행되므로 두가지를 나누어 살펴보겠습니다. 여담이지만, 이러한 조건분기로 인해 커스텀 `resovler`와 네이티브 프로퍼티를 모두 명시하는경우 커스텀 `resovler`의 우선순위가 높아서 커스텀`resovler`만 실행 되게 됩니다.
+
+### resolver가 존재하는 경우
+`resolver`는 유효성 검사를 수행할때 조건을 보다 직관적으로 명시할수 있도록 도와주는 유효성 검사 헬퍼함수입니다. joi, zod, yup등 여러 라이브러리들이 있지만 이들은 모두 값을 넣으면 에러객체가 반환되는 동일한 인터페이스를 가지고 있기에 어떤 라이브러리를 사용하더라도 문제가 없습니다.
+
+```typescript
+const schema = yup
+  .object()
+  .shape({
+    name: yup.string().required(),
+    age: yup.number().required(),
+  })
+  .required()
+
+const App = () => {
+  const { register, handleSubmit } = useForm<Inputs>({
+    resolver: yupResolver(schema), // yup, joi and even your own.
+  })
+
+  return (
+    <form onSubmit={handleSubmit((d) => console.log(d))}>
+      <input {...register("name")} />
+      <input type="number" {...register("age")} />
+      <input type="submit" />
+    </form>
+  )
+}
+```
+
+이처럼 `resolver`를 명시하였을때는 어떤 방식으로 유효성검사가 처리되는지 살펴보겠습니다.
+
+```typescript
+
+// 1. resolver 옵션으로 넘어온 함수 실행하기
+const { errors } = await _executeSchema([name]);
+
+// 2. validation 사후 처리
+_updateIsFieldValueUpdated(fieldValue);
+
+if (isFieldValueUpdated) {
+  const previousErrorLookupResult = schemaErrorLookup(
+    _formState.errors,
+    _fields,
+    name
+  );
+  const errorLookupResult = schemaErrorLookup(
+    errors,
+    _fields,
+    previousErrorLookupResult.name || name
+  );
+
+  error = errorLookupResult.error;
+  name = errorLookupResult.name;
+
+  isValid = isEmptyObject(errors);
+}
+```
+
+#### resolver 옵션으로 넘어온 함수 실행하기
+가장 먼저 수행하는 작업은 `resolver` 옵션으로 넘어온 커스텀 `resovler`를 실행하는 `_excuteSchema`함수를 실행하는것입니다.
+
+```typescript
+const _executeSchema = async (name?: InternalFieldName[]) => {
+  // 유효성 업데이트 시작 업데이트
+  _updateIsValidating(name, true);
+  const result = await _options.resolver!(
+    _formValues as TFieldValues,
+    _options.context,
+    getResolverOptions(
+      name || _names.mount,
+      _fields,
+      _options.criteriaMode,
+      _options.shouldUseNativeValidation
+    )
+  );
+  // 유효성 업데이트 종료 업데이트
+  _updateIsValidating(name);
+  return result;
+};
+```
+함수가 하는일은 간단한데.`options.resolver`를 실행하고, 비동기로 실행되는 해당함수의 앞뒤로 `_updateIsValidating`함수를 이용해 로딩을 걸어줍니다.
+
+`_options.resolver`의 첫번째 인자로 들어가는 값은 폼이 내부적으로 관리하는 `_formValues`이고, 두번째 값은 유효성 검사시 사용할 `context` 값입니다. 세번째는 `resolver` 실행시 필요한 옵션입니다. 간략하게 첫번째 인자인 `_formValues`를 넘겨 유효성검사를 수행하고 에러객체를 반환한다 정도로 정리하면 되겠습니다.
+
+#### validation 사후 처리
+이제 다시 함수로 돌아가겠습니다. 다음 라인에서는 `_updateIsFieldValueUpdated`함수를 실행합니다. 이로인해 `isFieldValueUpdated`변수의 값이 업데이트됩니다. 우리가 이전에 값을 설정했기때문에 이 값은 `true`가 됩니다. 이 값이 `false`가 되려면, `validation`을 업데이트하고있는 와중에 `_fieldValue`가 변경되어야합니다. 이러면 유효성검사를 계속해서 수행할 필요가 없기때문에 스킵하게됩니다. 이 또한 불필요한 작업을 추가적으로 수행하지 않는것으로 이해하시면 되겠습니다.
+
+`isFieldValueUpdated`가 `true`이므로 if문 내부를 살펴봅시다. 여기서는 `schemaErrorLookup`함수를 사용하여 `previousErrorLookupResult`와 `errorLookupResult`를 설정하게되는데, 이 함수는 에러 객체에서 특정 `name`의 에러를 찾는 함수입니다. 간단하게 생각하면 `get`함수를 사용하여 `error`객체를 조회하면 될것 같지만, 여러 이름을 전달하는 경우 (`name1.name2`와 같이 사용) 때문에 이러한 함수가 필요합니다. 중요한 함수는 아니기에 내부동작이 궁금하신분은 주석을 참고하여 살펴보시면 좋을것 같습니다.
+
+```typescript
+export default function schemaErrorLookup<T extends FieldValues = FieldValues>(
+  errors: FieldErrors<T>,
+  _fields: FieldValues,
+  name: string,
+): {
+  error?: FieldError;
+  name: string;
+} {
+  // 에러 객체에서 name에 해당하는 에러 추출
+  const error = get(errors, name);
+
+  // 에러가 있거나 name이 키라면 조기 반환
+  if (error || isKey(name)) {
+    return {
+      error,
+      name,
+    };
+  }
+
+  // 여러 이름을 넘긴경우 처리
+  const names = name.split('.');
+
+  while (names.length) {
+    const fieldName = names.join('.');
+    const field = get(_fields, fieldName);
+    const foundError = get(errors, fieldName);
+
+    if (field && !Array.isArray(field) && name !== fieldName) {
+      return { name };
+    }
+
+    if (foundError && foundError.type) {
+      return {
+        name: fieldName,
+        error: foundError,
+      };
+    }
+
+    names.pop();
+  }
+
+  return {
+    name,
+  };
+}
+```
+그리고 error, name, isValid를 업데이트합니다.
+
+### resolver 없을때 
+```typescript
+// 1. error 객체 생성 및 할당
+_updateIsValidating([name], true);
+error = (
+  await validateField(
+    field,
+    _formValues,
+    shouldDisplayAllAssociatedErrors,
+    _options.shouldUseNativeValidation
+  )
+)[name];
+_updateIsValidating([name]);
+
+// 2. _updateIsFieldValueUpdated 업데이트 및 이에 따라 로직 실행
+_updateIsFieldValueUpdated(fieldValue);
+
+// 3. 
+if (isFieldValueUpdated) {
+  if (error) {
+    isValid = false;
+  } else if (_proxyFormState.isValid) {
+    isValid = await executeBuiltInValidation(_fields, true);
+  }
+}
+```
+앞서 resolver를 적용하는 케이스와 로직이 유사합니다. `validateField`함수를 실행해 에러객체를 반환하고 그사이에 `_updateIsValidating`함수를 실행하여 로딩을 걸어줍니다. 이후 `_updateIsFieldValueUpdated`함수를 실행하여 `isFieldValueUpdated` 변수를 업데이트 한뒤 `isValid`를 업데이트 합니다. 네이티브 유효성검사를 수행하는 `validateField`의 경우 지면 관계상 너무 길어 포함시키지 않았지만, `min`,`max`등 여러 조건에 대해 케이스별로 처리하는 로직이 포함되어있습니다. 혹시 궁금하시다면 실제 로직을 찾아보시면 좋을것 같습니다.
+
+## 연관된 폼 요소트리거 및 에러 렌더링
+가장 마지막 조건문은 `isFieldValueUpdated` 즉, 필드 값이 업데이트 되었을때 의존성있는 요소와 에러를 렌더링하는 로직입니다. 두가지 항목을 나누어 살펴보겠습니다.
+
+```typescript
+if (isFieldValueUpdated) {
+  // 1. deps 에 명시된 의존성이 있는 요소 트리거
+  field._f.deps &&
+    trigger(
+      field._f.deps as FieldPath<TFieldValues> | FieldPath<TFieldValues>[]
+    );
+  
+  // 2. shouldRenderByError 함수 실행
+  shouldRenderByError(name, isValid, error, fieldState);
+}
+```
+
+### deps
+`deps`에는 이 필드가 변경되었을때 변경되어야할 다른 필드를 명시하게됩니다. 따라서 해당 필드가 있을때는 `trigger`메서드를 이용해 `deps` 내부에 명시한 필드의 유효성을 다시 계산합니다.
+
+`trigger` 메서드 또한 지면 관계상 살펴보지는 않고 넘어가지만, 해당 메서드는 사용자가 직접 사용할수 있는 메서드로 특정 필드의 유효성검사를 수행할수 있도록 해주는 함수입니다.
+
+### shouldRenderByError
+`shouldRenderByError`함수명을 보면 에러와 함께 리렌더링 하는 함수로 추측되는데, 이 사실이 맞는지는 함수를 분석하면서 확인해보겠습니다.
+
+```typescript
+const shouldRenderByError = (
+  name: InternalFieldName,
+  isValid?: boolean,
+  error?: FieldError,
+  fieldState?: {
+    dirty?: FieldNamesMarkedBoolean<TFieldValues>;
+    isDirty?: boolean;
+    touched?: FieldNamesMarkedBoolean<TFieldValues>;
+  }
+) => {
+  // 1. 사용중인 변수
+  const previousFieldError = get(_formState.errors, name);
+  // isValid를 사용중이고, isValid값이 불리언이고, 이전 valid값과 다른경우에만 valid를 업데이트합니다.
+  const shouldUpdateValid =
+    _proxyFormState.isValid &&
+    isBoolean(isValid) &&
+    _formState.isValid !== isValid;
+
+  // 2. 에러 업데이트
+  if (props.delayError && error) {
+    delayErrorCallback = debounce(() => updateErrors(name, error));
+    delayErrorCallback(props.delayError);
+  } else {
+    clearTimeout(timer);
+    delayErrorCallback = null;
+    error
+      ? set(_formState.errors, name, error)
+      : unset(_formState.errors, name);
+  }
+
+  // 3. 에러 발행
+  if (
+    (error ? !deepEqual(previousFieldError, error) : previousFieldError) ||
+    !isEmptyObject(fieldState) ||
+    shouldUpdateValid
+  ) {
+    const updatedFormState = {
+      ...fieldState,
+      ...(shouldUpdateValid && isBoolean(isValid) ? { isValid } : {}),
+      errors: _formState.errors,
+      name,
+    };
+
+    _formState = {
+      ..._formState,
+      ...updatedFormState,
+    };
+
+    _subjects.state.next(updatedFormState);
+  }
+};
+```
+첫번째 항목에서는 함수내부에서 사용할 변수를 살펴보겠습니다. `previousFieldError`에는 `_formState.errors`에서 `name`에 해당하는 에러를 꺼내어 저장해둡니다. 이미 유효성검사를 통해 에러를 만들어내었더라도 아직 저장하지 않았기에 이전에 발생한 에러입니다. `shouldUpdateValid`의 경우 `isValid`를 사용하고 있고, `isValid`가 `boolean`이면서, 이전값과 다른경우 업데이트 가능하도록 값이 설정됩니다.
+
+두번째 항목은 `_formState.errors`에 `error`인자가 있다면 `name`의 에러를 업데이트 하고 없다면 제거합니다. 이때 `delayError`옵션 관련 로직이 있습니다. 해당 옵션은 에러 발생을 지연시키는 로직으로, 만약 해당 옵션이 켜져있다면 `delayErrorCallback`에 디바운스를 걸고 `updateErrors`를 넣어둔뒤 한번 실행해줍니다. 추후 `onChange`가 다시 실행되면 앞서 살펴본것처럼 이함수가 다시 실행되어 이라인까지 와야 또다시 실행이가능합니다.이로인해 else문에서 클리어하는 로직이 있는것을 알 수 있습니다.
+
+네번째는 에러가 존재하면서 이전 에러와 다르거나, 에러가 없으면서 이전 필드 에러가 있거나, `dirty`, `isDirty`, `touched`, `vaild`가 업데이트 되어야한다면 `updatedFormState`를 만들고 이를 `_formState`에 반영한뒤 변경사항을 발행합니다.
+
+## 마치며
+`onChange`의 동작을 살펴보았습니다. `_formValue에` 값을 설정하고, 유효성검사를 수행하는 두가지 작업 뿐만 아니라 리렌더링과 연산을 최소한으로 발생시키기 위한 여러 작업들도 이해하실수 있으셨으면 좋겠습니다.
+
+다음은 useForm의 마지막, 제출하는 단계를 살펴보겠습니다.
+
+## 참고자료
+[input_types](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input#input_types)
