@@ -1,0 +1,118 @@
+---
+title: "React-Hook-Form Deep Dive - 5. useForm(제출)"
+date: "2025-02-16T21:20:18.164Z"
+description: "React Hook Form의 가장 중요한 hook인 useForm의 handleSubmit메서드 중심으로 제출과정을 살펴봅니다."
+category: "기술아티클"
+estimation: 5
+thumbnail: "./thumbnail.png"
+slug: "/react-hook-form-deep-dive-5"
+---
+
+이번 아티클에서는 `useForm`의 마지막으로 제출할때 사용하는 `handleSubmit`메서드를 살펴볼것입니다. 앞선 등록, 변경에 비하면 상당히 간단한 수준이니 마지막으로 정리하는 차원에서 살펴보시면 좋겠습니다.
+
+`handleSubmit`메서드의 인터페이스를 간단하게 살펴보자면, `handleSubmit`메서드의 첫번째 인자로 제출이 성공적으로 이루어졌을때 실행할 콜백함수를 넘기고, 유효성 검사후 에러가 발생한 경우 실행할 콜백함수를 넘겨야합니다. 이때 문법이나 Error객체등의 에러가 아닌 유효성 검사에서 발생한 에러만을 감지한다는점을 참고 부탁드립니다.
+
+```typescript
+export default function App() {
+  const { register, handleSubmit } = useForm<FormValues>()
+  const onSubmit: SubmitHandler<FormValues> = (data) => console.log(data)
+  const onError: SubmitErrorHandler<FormValues> = (errors) => console.log(errors)
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <input {...register("firstName")} />
+      <input {...register("lastName")} />
+      <input type="email" {...register("email")} />
+
+      <input type="submit" />
+    </form>
+  )
+}
+```
+ 
+## handleSubmit 살펴보기
+```typescript
+const handleSubmit: UseFormHandleSubmit<TFieldValues> =
+  (onValid, onInvalid) => async (e) => {
+    let onValidError = undefined;
+    if (e) {
+      // 1. 기본 제출 동작 방지
+      e.preventDefault && e.preventDefault();
+      // 2. 이벤트 객체를 풀링관련 코드
+      e.persist && e.persist();
+    }
+
+    // 3. fieldValues 기본값으로 사용함
+    let fieldValues = cloneObject(_formValues);
+
+    // 4. isSubmitting업데이트
+    _subjects.state.next({
+      isSubmitting: true,
+    });
+
+    // 5. 유효성 검사
+    if (_options.resolver) {
+      const { errors, values } = await _executeSchema();
+      _formState.errors = errors;
+      fieldValues = values;
+    } else {
+      await executeBuiltInValidation(_fields);
+    }
+
+    // 6. onValid 또는 onInvalid 콜백함수 호출
+    if (isEmptyObject(_formState.errors)) {
+      _subjects.state.next({
+        errors: {},
+      });
+
+      try {
+        await onValid(fieldValues as TFieldValues, e);
+      } catch (error) {
+        onValidError = error;
+      }
+    } else {
+      if (onInvalid) {
+        await onInvalid({ ..._formState.errors }, e);
+      }
+
+      _focusError();
+      setTimeout(_focusError);
+    }
+
+    // 7. 제출이 완료된 이후 상태를 업데이트 합니다.
+    _subjects.state.next({
+      isSubmitted: true, // 제출시도가 완료되었으므로 true로 변경
+      isSubmitting: false, // 제출이 종료되었으므로 false로 변경
+      isSubmitSuccessful: isEmptyObject(_formState.errors) && !onValidError, // 에러가 없고, onValidError(onValid수행중 발생한 에러)도 없으면 true로 변경
+      submitCount: _formState.submitCount + 1, // submit count 1회 추가
+      errors: _formState.errors, // 생성한 에러 객체 적용
+    });
+
+    // 8. onValid 수행중 에러가 발생하였다면 이 에러를 전파합니다.
+    if (onValidError) {
+      throw onValidError;
+    }
+  };
+
+```
+
+첫번째 항목에서는 이벤트 객체를 이용하여 기본동작을 처리하는 작업을 수행합니다. 일반적으로 `form`태그를 사용하면 폼 양식에서 작성한 데이터를 `action`에 명시한 주소로 제출하는 폼의 기본 제출 동작이 실행됩니다. 하지만 react-hook-form에서는 이러한 기본동작을 사용하지 않고 동작을 사용자가 재정의하기 때문에(api이용하여 등록등) 이러한 코드를 사용하여 기본 동작을 막게됩니다. 
+
+두번째 항목은 이벤트 객체 풀링과 관련된 코드입니다. react 17이전 버전에서는 이벤트 객체를 풀링하는데, 이때문에  이벤트 핸들러가 콜스택에서 사라지면 이벤트객체가 사라져버려 비동기작업에서 참조할수 없게됩니다. 따라서 이를 막도록 명시되어있는 코드입니다. 더 자세한 내용은 [공식문서](https://legacy.reactjs.org/docs/legacy-event-pooling)와 [블로그글](https://legacy.reactjs.org/blog/2020/08/10/react-v17-rc.html#no-event-pooling)을 참고해보세요
+
+세번째 항목은 모든 필드의 값을 가지고 있는 변수인 `fieldValues`를 설정합니다. 앞서 살펴본것 처럼 `onChange`메서드 에서 값이 변경될때 `_formValues`에 값을 설정하기 때문에 제출시에는 사용자가 입력한값이 모두 반영되어있습니다. `fieldValues`에는 `_formValues`값을 복사하여 사용하게됩니다.
+
+네번째 항목에서는 제출중임을 의미하는 `isSubmitting`의 값을 `true`로 변경해줍니다. 본격적인 제출작업이 시작되기 때문입니다.
+
+다섯번째 항목에서는 앞선 `change`이벤트에서 살펴보았던것 처럼 옵션에 `resolver`를 명시해두었다면 `_executeSchema`함수를 실행해 유효성검사를 수행하고, 그렇지 않으면 `executeBuiltInValidation`를 실행해 네이티브 프로퍼티에 대한 유효성을 검사합니다.
+
+여섯번째 항목에서는 에러가 있는지 없는지 여부에 따라 onValid와 onInvalid 콜백함수를 호출합니다. 에러가 없는경우 `errors`를 빈객체로 전파한뒤, `onValid`함수를 호출합니다. 이때 에러가 발생하면 `onValidError`에 에러 객체를 저장해둡니다. 에러가 있는경우 `onInvalid`함수를 호출하고 `_focusError`함수를 호출해 에러가난 필드에 포커스합니다. 
+
+일곱번째 항목에서는 제출이 완료된후 필요한 상태를 업데이트 합니다. `isSubmitted`, `isSubmitting`, `isSubmitSuccessful`, `submitCount`, `errors`를 업데이트 하며 각 필드에 대한 설명은 주석을 참고해주세요
+
+여덟번째 항목에서는 onValid 수행중 발생한 에러를 전파하게됩니다. 처음 언급한것 처럼 `onValid`실행중 try catch문에 잡히는 에러는 별도 에러로 전파됨을 확인할수 있습니다.
+
+## 마치며
+등록, 변경과 다르게 크게 복잡한 로직은 없었던것 같습니다. 마지막으로 정리하자면 제출함수는 유효성검사를 한번더 수행하고, 검사 결과에 따라 onValid 또는 onInvalid함수를 실행합니다.
+
+useForm에 대한 분석은 여기서 끝이며, 마지막 아티클에서는 controller를 살펴볼것입니다.
