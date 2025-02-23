@@ -1,0 +1,125 @@
+---
+title: "React-Hook-Form Deep Dive - 6. Controller"
+date: "2025-02-16T21:20:18.164Z"
+description: "React Hook Form의 Controller 컴포넌트를 살펴봅니다"
+category: "기술아티클"
+estimation: 5
+thumbnail: "./thumbnail.png"
+slug: "/react-hook-form-deep-dive-6"
+---
+
+이번 장에서는 MUI나 Ant를 RHF와 함께 사용할수 있도록 해주는 `Controller`컴포넌트에 대해 살펴보겠습니다. 
+
+MUI나 Ant에서 제공하는 컴포넌트는 네이티브 요소가 아니기 때문에 앞서 살펴본 것처럼 값이 변경되면 실행되는 `onChange`메서드에서 `ref`를 이용해 값을 꺼낸뒤 `formValues`에 저장해 둘수 없습니다. 물론 초기값과 같은 요소를 `ref`를 이용해 넣는것도 불가능합니다.
+
+그렇다면 `Controller`컴포넌트는 `ref`를 대체하기 위해 어떤 방식을 사용할까요? 이번 아티클에서는 Controller를 분석하면서 이 질문에 대답해볼것입니다. 읽기 전에 미리 정답을 생각해보시고, 정답과 맞는지 비교해보시는것도 도움이 될것입니다.
+
+## 예제 코드
+먼저 제어컴포넌트를 RHF에 적용하기 위해 어떻게 코드를 작성해야하는지 살펴보겠습니다.
+```typescript
+const App = () => {
+  const {
+    handleSubmit,
+    formState: { errors },
+    reset,
+    control,
+  } = useForm();
+
+  return (
+    <form onSubmit={handleSubmit(() => {})}>
+      <Controller
+        render={({ field }) => <TextField {...field} />}
+        name="TextField"
+        control={control}
+        rules={{ required: true }}
+      />
+      {errors.TextField && <p>TextField Error</p>}
+    </form>
+  );
+};
+```
+제어 컴포넌트를 RHF와 사용하기 위해서는 `Controller`컴포넌트를 사용해야합니다.`props`의 `rules`나 `name`의 경우 앞서 살펴본것과 크게 다르지 않습니다. 중요한것은 `render`입니다. `render`에는 우리가 렌더링하고자하는 컴포넌트를 반환하는 함수를 넣는데 이때 함수의 인자로 `register`메서드가 반환하는 필드 객체가 넘어오므로 필요한 요소를 UI컴포넌트의 Props로 넘겨줍니다. 대표적으로 `value` 와 `onChange`를 넣어 주게됩니다. 
+
+즉 `formField`의 `value`와 `onChange`를 UI컴포넌트의 props로 넘기게 되면서 UI컴포넌트가 바라보는 값, UI컴포넌트에서 값이 변경되었을때 해야할 액션이 모두 RHF의 역할이 되어버렸습니다. 따라서 UI컴포넌트는 오로지 UI요소를 그려내는 역할만 가지게 됩니다.
+
+이를 통해 `onChange`메서드에 대략적으로 이벤트 객체에서 값을 꺼내여 `value`에 넣어주는것과 유사한 로직이 포함되어 UI와 Form모두에 최신의 값을 보여줄수 있도록 해줌을 짐작해볼수 있습니다. 이를 확실하게 알아보기위해 Controller 컴포넌트부터 살펴봅시다.
+
+## Controller
+```typescript
+const Controller = <
+  TFieldValues extends FieldValues = FieldValues,
+  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
+>(
+  props: ControllerProps<TFieldValues, TName>,
+) => props.render(useController<TFieldValues, TName>(props));
+```
+`useContorller`를 실행한 결과를 `render`함수의`props`로 넘기고 있는 간단한 코드이기에 핵심은 `useController` 코드가 될것입니다.
+
+## useController
+```typescript
+export function useController<
+  TFieldValues extends FieldValues = FieldValues,
+  TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>,
+>(
+  props: UseControllerProps<TFieldValues, TName>,
+): UseControllerReturn<TFieldValues, TName> {
+  const methods = useFormContext<TFieldValues>();
+  const { name, disabled, control = methods.control, shouldUnregister } = props;
+  const isArrayField = isNameInFieldArray(control._names.array, name);
+  // 1. useWatch를 통해 control에서 값을 항상 가져옵니다.
+  const value = useWatch({
+    control,
+    name,
+    defaultValue: get(
+      control._formValues,
+      name,
+      get(control._defaultValues, name, props.defaultValue),
+    ),
+    exact: true,
+  }) as FieldPathValue<TFieldValues, TName>;
+
+  // 2. register의 실행 및 결과 저장
+  const _registerProps = React.useRef(
+    control.register(name, {
+      ...props.rules,
+      value,
+      ...(isBoolean(props.disabled) ? { disabled: props.disabled } : {}),
+    }),
+  );
+
+  return {
+    field: {
+      name,
+      value,
+      ...(isBoolean(disabled) || formState.disabled
+        ? { disabled: formState.disabled || disabled }
+        : {}),
+      // 3. register.onChange 메서드에 만들어진 이벤트 객체를 넘겨 값을 formValue에 저장하도록함
+      onChange: React.useCallback(
+        (event) =>
+          _registerProps.current.onChange({
+            target: {
+              value: getEventValue(event),
+              name: name as InternalFieldName,
+            },
+            type: EVENTS.CHANGE,
+          }),
+        [name],
+      ),
+     }
+   } as ControllerFieldState,
+  };
+```
+먼저 첫번째 항목을 살펴보면, `useWatch`를 이용하여 `value`를 가져오고 있습니다. `useWatch`는 `watch`메서드의 훅 버전입니다. 이를 통해 `useController` 훅은 항상 최신의 `value`값을 가지게 됩니다. 따라서  `initialValue`나 `setValue`같은 값을 통해 폼의 값을 변경해도 정상적으로 값이 UI컴포넌트에 반영되게됩니다.
+
+두번째 항목에서는 `register`메서드를 통해 필드를 등록합니다. 앞서 네이티브 요소에 등록하는것과 다르게  `register`메서드를 실행한 결과를 단순히 `ref`에 저장만 해둡니다. 
+
+세번째 항목을 보면 `onChange` 이벤트 핸들러에서 `regiseter`메서드의 실행결과 반환된 객체의 `onChange`메서드를 실행하고 있음을 확인할 수 있습니다. 이로 인해 `formContorl`내부의 `value`가 변경되고, 앞서 살펴보았던것 처럼 `value`는 현재 `useWatch`에 의해 구독되고 있으므로 최신의 `value`가 `props`로 전달됩니다.
+
+## 정리
+이제 처음에 남겼던 질문에 대답을 해보겠습니다. `Controller`컴포넌트는 `ref`를 대체하기 위해 **value를 항상 최신의 상태로 유지하는 제어 컴포넌트 방식을 사용**하게 됩니다. 일반적으로 폼 컴포넌트 하위에 많은 컴포넌트를 두지 않기 때문에 많은 리렌더링으로 인한 성능저하가 눈에 띄일정도는 아니겠지만, `Controller` 컴포넌트를 사용하게 되면 `ref`를 사용하지 않기 때문에 제어 컴포넌트 방식이 된다는점을 알아두시면 좋겠습니다.
+
+## 마치며
+이번 아티클을 끝으로 RHF에 대한 분석을 마무리하겠습니다. 규모가 작지만은 않은 라이브러리라 많은 시간을 들여 분석하면서 새로운 문법이나 방식에 대해 많은것을 얻을수 있었지만, 분석 자체의 어려움으로 코드가 가지고 있는 의도를 깊이있게 고민해보지 못한점은 아쉬운점인것 같습니다.
+
+추가적으로 시리즈에서 살펴보지못한 `useForm`의 메서드나 `useFieldArray`에 대해서 분석해보시거나 다른 Form 라이브러리를 추가로 분석해시면 React에서 Form을 사용하는 방식에 대한 이해를 높이실수 있을것입니다.
