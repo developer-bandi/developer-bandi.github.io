@@ -6,7 +6,7 @@ import * as styles from "./page.module.css"
 import Introduce from "./introduce/introduce"
 import Careers from "./careers/careers"
 import OpenSource from "./openSource/openSource"
-
+import Project from "./project/project"
 const Page = () => {
   React.useEffect(() => {
     setTimeout(() => {
@@ -20,6 +20,7 @@ const Page = () => {
       <main className={styles.container}>
         <Introduce />
         <Careers />
+        <Project />
         <OpenSource />
       </main>
       <Footer />

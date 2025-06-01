@@ -5,31 +5,24 @@
 .listWrap {
   list-style: none;
   padding-left: 0px;
+
 }
 
-.listHeader {
+.listHeader{
   display: flex;
   gap: 10px;
   align-items: center;
-  h3 {
-    font-size: 24px;
+  h3{
+    font-size:24px
   }
 }
-.listContents {
-  margin: 0;
+.listContents{
+  margin:0;
   padding-left: 10px;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  li {
+  li{
     font-size: 18px;
-  }
-}
-
-.link {
-  text-decoration: underline;
-  color: black;
-  &:hover {
-    color: skyblue;
   }
 }

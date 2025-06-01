@@ -60,7 +60,6 @@ const Page = ({ data }: Props) => {
           <div className={styles.empty}>아직 작성된 글이 없습니다</div>
         ) : (
           <>
-            {" "}
             <CardList
               list={list.slice((page - 1) * PAGE_UNIT, page * PAGE_UNIT)}
             />
