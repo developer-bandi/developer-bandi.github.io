@@ -12,10 +12,10 @@ const Introduce = () => {
       </div>
       <div className={styles.introBox}>
         <ul>
-          <li>프론트엔드 개발자로써 다양한 경험이 있습니다.</li>
-          <li>문서화에 관심이 많습니다. 개발한 라이브러리나, 프로젝트를 문서로 정리하고 이를 공유하여 남기는것을 습관처럼 하고 있습니다.</li>
-          <li>개발자 경험을 향상시키는게 관심이 많습니다. </li>
-          <li>기술의 동작 원리에 관심이 많아 오픈소스 라이브러리를 분석하는것을 좋아합니다. redux, react-hook-form, react-router, react-query등을 분석해보았습니다. 또한 기여에도 관심이 많아 AST와 관련된 프로젝트인 typescript-eslint에 주로 기여하고 있습니다.</li>
+          <li>3년차 프론트엔드 개발자로, 물류 도메인에서 WMS/OMS/FULLFILLMENT 뿐만 아니라 ADMIN을 개발/유지보수 한 경험이 있습니다. </li>
+          <li>개발자 경험을 향상시키는게 관심이 많습니다. msw devtools, 다국어 자동화 스크립트 등을 개발하여 개발자들이 보다 쉽게 개발할수 있도록 도구를 만든 경험이 있습니다. </li>
+          <li>기술의 동작 원리에 관심이 많아 오픈소스 라이브러리를 분석하는것을 좋아합니다. redux, react-hook-form, react-router, react-query를 분석하고 이를 블로그에 작성한 경험이 있습니다. </li>
+          <li>오픈소스 기여에 관심이 많습니다. 최근에는 AST와 관련된 프로젝트인 typescript-eslint에 주로 기여하고 있습니다 </li>
         </ul>
       </div>
       <Contact />

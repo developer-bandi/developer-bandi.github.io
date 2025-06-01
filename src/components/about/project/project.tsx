@@ -9,25 +9,21 @@ const Project = () => {
       <ul className={styles.listWrap}>
         <li>
           <div className={styles.listHeader}>
-            <h3>codemod-kit</h3>
-            <p>2025. 06 ~ 현재</p>
+            <h3>
+              <a href="https://github.com/developer-bandi/codemod-kit">codemod-kit</a>
+            </h3>
+            <p>2025. 04 ~ 현재</p>
           </div>
           <ul className={styles.listContents}>
-            <li>WMS, Fullfilment 페이지 프론트엔드 개발</li>
+            <li>자주 사용하는 codemod를 쉽게 사용할 수 있도록 도와주는 라이브러리입니다.</li>
             <li>
-              WMS 다국어 적용시 상수화, 키추출, 배포를 쉽게할수 있도록 자동화
-              스크립트를 개발하여 번역에 걸리는 시간 단축
+              jscodeshift를 기반으로 설계하였고 몇가지 옵션을 받아 cli나 programatic방법으로 사용할 수 있도록 하였습니다.
             </li>
             <li>
-              아이콘 피그마 플러그인, 자동화 스크립트, 아이콘 라이브러리를
-              제작하여 복잡한 아이콘 사용방식 개선
+              import문, 컴포넌트 props, 함수 paramter와 관련된 리팩토링을 지원합니다.
             </li>
             <li>
-              멀티레포로 구성된 페이지를 모노레포로 구성하여 관심사의 집중
-            </li>
-            <li>
-              팀내 컨벤션 정리후 필요한 경우 custom rule까지 활용하여 컨벤션
-              관리 자동화
+              <a href="https://codemod-kit.netlify.app/">웹사이트</a>를 통해 문서 및 playground를 지원하여 쉽게 사용할 수 있도록 하였습니다.
             </li>
           </ul>
         </li>
