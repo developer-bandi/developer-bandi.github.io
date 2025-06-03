@@ -21,10 +21,11 @@ const Header = () => {
         </Link>
         <nav className={styles.nav}>
           <ul>
-            <li>
-              <Link to="/about" className={styles.navItem}>
+            <li className={styles.navItem}>
+              About(WIP)
+              {/* <Link to="/about" className={styles.navItem}>
                 About
-              </Link>
+              </Link> */}
             </li>
           </ul>
         </nav>
