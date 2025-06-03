@@ -4,6 +4,7 @@
 
 .title {
   font-size: 40px;
+  margin:0
 }
 
 .repositoryListWrap {
@@ -13,6 +14,12 @@
 
 .repositoryTitle {
   font-size: 24px;
+  a{
+    color:black;
+  }
+  a:hover{
+    color:skyblue;
+  }
 }
 
 .contributeListWrap {
@@ -27,11 +34,6 @@
   padding: 0 0 0 5px;
   margin: 0 0 0 20px;
   font-size: 18px;
-  a{
-    color:black;
-  }
-  a:hover{
-    color:skyblue;
-  }
+
 }
 

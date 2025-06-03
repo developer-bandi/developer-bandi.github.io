@@ -7,7 +7,7 @@ estimation: 15
 thumbnail: "./thumbnail.png"
 slug: "/react-router-deep-dive-2"
 ---
-이번 아티클에서는 주소창의 주소를 직접 변경하거나, history.push와 같은 메서드를 사용해 브라우저의 주소를 변경하였을때 주소와 매치되는 컴포넌트가 렌더링되는 과정을 살펴보겠습니다. 분석에 사용할 코드는 아래와 같습니다.
+이번 아티클에서는 주소창의 주소를 직접 변경하거나, `history.push`와 같은 메서드를 사용해 브라우저의 주소를 변경하였을때 주소와 매치되는 컴포넌트가 렌더링되는 과정을 살펴보겠습니다. 분석에 사용할 코드는 아래와 같습니다.
 
 ```typescript
 import { BrowserRouter, Routes, Route } from "react-router";
@@ -72,7 +72,7 @@ export function BrowserRouter({
   );
 }
 ```
-코드를 개략적으로 살펴보면 `createBrowserHistory`함수를 이용해 `history`객체를 생성한뒤 `setState`를 콜백함수로 넣어 구독하고 있습니다. 따라서`history`객체가 변경되면 컴포넌트가 리렌더링되어 변경된 `history`가 하위 컴포넌트에 반영되므로 우리가 history에서 꺼내어 사용하는 주소에 관한 정보들(pathname, hash, search등)은 항상 최신값을 유지할수 있게 됩니다.
+코드를 개략적으로 살펴보면 `createBrowserHistory`함수를 이용해 `history`객체를 생성한뒤 `setState`를 콜백함수로 넣어 구독하고 있습니다. 따라서`history`객체가 변경되면 컴포넌트가 리렌더링되어 변경된 `history`가 하위 컴포넌트에 반영되므로 우리가 `history`에서 꺼내어 사용하는 주소에 관한 정보들(pathname, hash, search등)은 항상 최신값을 유지할수 있게 됩니다.
 
 그렇다면 어떤 행위가 `history`객체를 변경하는 행위이고 어떤 과정을 거쳐 객체 변경이 컴포넌트에 통지될까요? 이를 알아보기 위해 `history`객체를 생성하는 `createBrowserHistory`함수를 살펴보겠습니다.
 
@@ -295,7 +295,7 @@ function getUrlBasedHistory(
 이 함수는 앞서 말씀드린대로 history객체를 반환하는 함수입니다. 반환하는 객체를 살펴보면 `listen`이라는 history객체를 구독할수 있도록 해주는 함수도 있고, 우리가 주소를 변경할때 사용하는 `push`, `replace`함수도 있습니다.
 
 
-#### listen과 handlePop
+#### listen
 ```typescript
 function listen(fn: Listener) {
   // history의 리스너는 하나만 등록 가능함.
@@ -1029,9 +1029,8 @@ export function _renderMatches(
 한편 "/dashboard/settings" 와 같이 부모자식 요소가 존재하는 경우 `RenderedRoute` 컴포넌트에 쌓아나가는 방식으로 진행하게 됩니다. 이때 `routeContext`의 `outlet`에 이전 컴포넌트가 포함되기 때문에, 가장 오른쪽에 위치한 자식요소가 부모요소의 `Outlet`컴포넌트를 통해 렌더링되게 됩니다. 
 
 ## 마치며
-간단하게 React-router가 주소에 맞는 컴포넌트를 렌더링 하는 방식을 살펴보았습니다. history 객체를 이용하는 부분과, score를 이용해 브랜치를 정렬해 우선순위를 조정하는 방식의 아이디어가 인상 깊었던것 같습니다.
+React-router가 주소에 맞는 컴포넌트를 렌더링 하는 방식을 살펴보았습니다. 사용자 경험을 위해 useTransition을 사용하는 부분, score를 통해 일치하는 라우트를 반환하는 방법이 인상깊었던것 같습니다.
 
-감사합니다.
 
 ## 참고자료
 [startTransition](https://ko.react.dev/reference/react/startTransition)

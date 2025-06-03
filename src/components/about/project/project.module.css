@@ -1,0 +1,43 @@
+.title {
+  font-size: 40px;
+  margin-bottom: 0px;
+}
+
+.listWrap {
+  list-style: none;
+  padding-left: 0px;
+
+}
+
+.listHeader{
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  h3 {
+    margin:20px 0;
+    font-size:24px;
+    a{
+      color:black;
+    }
+    a:hover{
+      color:skyblue;
+    }
+  }
+}
+
+.listContents{
+  margin:0;
+  padding-left: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  li{
+    font-size: 18px;
+    a{
+      color:black;
+    }
+    a:hover{
+      color:skyblue;
+    }
+  }
+}
