@@ -10,7 +10,7 @@ slug: "/react-query-deep-dive-3"
 이번 장에서는 useQuery의 동작 과정을 살펴보겠습니다.
 
 ## QueryClientProvider
-우리가 react-query를 사용할때 가장 먼저 실행되는 코드는 `QueryClientProvider`입니다.
+우리가 react-query를 사용할때 가장 먼저 `App` 컴포넌트를 `QueryClientProvider` 컴포넌트로 래핑하므로 가장 먼저 실행되는 코드는 `QueryClientProvider`입니다. 
 ```typescript
 export const QueryClientContext = React.createContext<QueryClient | undefined>(
   undefined,
@@ -50,7 +50,7 @@ export const QueryClientProvider = ({
 ```
 아주 간단한 코드로 `queryclient`의 `mount`와 `unmount`를 `useEffect`에 넣어 라이프사이클에 맞게 실행되도록 처리해주는 액션 이외에, `contextAPI`를 통해 `queryClient`를 내부적으로 사용할수 있도록 해주는 역할을 가지고 있음을 알 수 있습니다.
 
-간단하지만 이러한 로직이 없으면 내부적으로 `queryClient`를 사용할수 없고 `queryClient`가 마운트되지않아 react-query를 사용할 수 없게 됩니다.
+간단하지만 이러한 로직이 없으면 내부적으로 `queryClient`를 사용할수 없고 `queryClient`가 마운트되지않아 `useQuery`를 사용할 수 없게 됩니다.
 
 ## useQuery
 QueryClientProvider도 실행되었으므로 이제 컴포넌트 내의 useQuery가 실행될 시점입니다. 
@@ -61,10 +61,10 @@ export function useQuery(options: UseQueryOptions, queryClient?: QueryClient) {
   return useBaseQuery(options, QueryObserver, queryClient)
 }
 ```
-타입 오버로딩을 모두 제거하면 이처럼 간단한 코드가 됩니다. 즉 핵심로직은 useBaseQuery에 존재하는것을 알 수 있습니다. 
+코드내에 존재하는 타입 오버로딩을 모두 제거하면 이처럼 간단한 코드가 됩니다. 즉 핵심로직은 `useBaseQuery`에 존재하는것을 알 수 있습니다. 
 
 ## useBaseQuery
-useBaseQuery에서 일부 타입을 제거하고, suspense,errorboundary 코드를 제거하면 다음과 같습니다.
+useBaseQuery에서 일부 타입을 제거하고, suspense, errorboundary 코드를 제거하면 다음과 같습니다.
 ```typescript
 export function useBaseQuery(
   options: UseBaseQueryOptions,
@@ -109,10 +109,12 @@ export function useBaseQuery(
     : result
 }
 ```
-코드를 1 ~ 4번으로 나누어 실행 흐름을 따라가보겠습니다. 생각보다 깊이있게 들어가는 코드가 많기 때문에 여러번 반복해서 살펴보는것을 추천드립니다.
+코드를 1 ~ 4번으로 나누어 각각 실행 흐름을 따라가보겠습니다. 
 
 ### observer 생성
-가장 먼저 실행되는 작업은 `observer`를 생성하는것입니다. 이 `observer`는 한번 생성되면 변경될 이유가 없으므로, `setState`가 존재하지 않습니다. `observer`의  생성자 함수인 `constructor`부터 살펴보겠습니다.
+가장 먼저 실행되는 작업은 `observer`를 생성하는것입니다. 이 `observer`는 한번 생성되면 변경될 이유가 없으므로, `setState`가 존재하지 않습니다. 
+
+`observer`의  생성자 함수인 `constructor`부터 살펴보겠습니다.
 ```typescript
   constructor(
     client: QueryClient,
@@ -141,7 +143,6 @@ export function useBaseQuery(
     
     // 1. 쿼리 업데이트
     this.#updateQuery()
-
 
     const mounted = this.hasListeners()
 
@@ -187,7 +188,7 @@ export function useBaseQuery(
     }
   }
 ```
-옵션값을 업데이트하는 로직은 중요하지만 간단하기때문에 바로 넘어가겠습니다. 여기서 중요한 로직은 `this.#updateQuery()`, `this.#executeFetch()`, `this.updateResult(notifyOptions)`입니다. 먼저 첫번째 로직을 살펴보겠습니다.
+옵션값을 업데이트하는 로직은 중요하지만 간단하기때문에 바로 넘어가겠습니다. 여기서 중요한 로직은 `this.#updateQuery()`, `this.#executeFetch()`, `this.updateResult(notifyOptions)`입니다. 먼저 `updateQuery`부터 살펴보겠습니다.
 
 #### updateQuery
 ```typescript
@@ -207,14 +208,14 @@ export function useBaseQuery(
   this.#currentQuery = query;
   this.#currentQueryInitialState = query.state;
 
-  // 이전 쿼리에 등록된 옵저버를 제거하고, 현재 쿼리에 옵저버 다시 등록 처음 옵저버 생성시는 구독리스너 없으므로 실행되지 않음
+  // 이전 쿼리에 등록된 옵저버를 제거하고, 현재 쿼리에 옵저버 다시 등록. 처음 옵저버 생성시는 구독리스너 없으므로 실행되지 않음
   if (this.hasListeners()) {
     prevQuery?.removeObserver(this);
     query.addObserver(this);
   }
 }
 ```
-생성자 함수에서 `query`를 설정한적이 없으므로 해당함수는 `query`를 초기화하는 과정이 되겠습니다. `queryCache`의 `build`함수를 이용해 쿼리를 가져오고, 이 쿼리를 현재 쿼리로 업데이트 해줍니다. `build`함수 먼저 살펴봅시다.
+생성자 함수에서 `query`를 설정한적이 없으므로 해당함수는 `query`를 초기화하는 과정이 되겠습니다. `queryCache`의 `build`함수를 이용해 쿼리를 가져오고, 이 쿼리를 현재 쿼리로 업데이트 해줍니다. `build`함수를 살펴봅시다.
 
 ```typescript
 build(
@@ -262,7 +263,7 @@ add(query: Query<any, any, any, any>): void {
 ```
 `queryKey`를 이용해 `queryHash`를 만든 다음, 이를 기반으로 기존의 `queries` 세트에서 존재하는 쿼리를 가져옵니다. 만약 쿼리가 있다면 해당 쿼리를 그대로 반환하고, 그렇지 않은 경우에만 `this.add`를 이용하여 생성된 `queries` 세트에 추가하게됩니다. 즉 정리하자면, `query`가 있으면 그대로 반환하고, 그렇지 않으면 새롭게 `query`를 만들고 `queries` 세트에 추가한뒤 반환합니다.
 
-> 추가적으로 queryHash를 생성하는 과정을 살펴보겠습니다. queryHash를 만드는 방법은 queryKey를 hashKey함수에 넣어 실행하여 만들어지는데, 이때 `JSON.stringify`를 실행하되, 두번째 인자로 콜백함수를 넘기고 있는것을 확인할수 있습니다. 이러한 로직을 넣게 되면, 객체에대해서 모두 이러한 콜백을 실행시킵니다. 콜백함수의 동작은 간단한데, 객체의 프로퍼티 순서가 다를 경우, 이를 동일하게 해주는 것입니다. 예를들어 `{name:"foo",age:24}`와 `{age:"foo",name:24}`은 그대로 `JSON.stringify`하면 다른 string이 되는데, 이를 정렬하여 키로 만들면 동일한 string이 되는것입니다. 객체의 프로퍼티 순서가 다른 쿼리를 가질 이유가 없기 때문에 이러한 로직이 포함되었습니다.
+> 중요한 부분은 아니지만, 추가적으로 queryHash를 생성하는 과정을 살펴보겠습니다. queryHash를 만드는 방법은 queryKey를 hashKey함수에 넣어 실행하여 만들어지는데, 이때 `JSON.stringify`를 실행하되, 두번째 인자로 콜백함수를 넘기고 있는것을 확인할수 있습니다. 이러한 로직을 넣게 되면, 객체에 대해서 모두 이러한 콜백을 실행시킵니다. 콜백함수의 동작은 간단한데, 객체의 프로퍼티 순서가 다를 경우, 이를 동일하게 해주는 것입니다. 예를들어 `{name:"foo",age:24}`와 `{age:"foo",name:24}`은 그대로 `JSON.stringify`하면 다른 string이 되는데, 이를 정렬하여 키로 만들면 동일한 string이 되는것입니다. 객체의 프로퍼티 순서가 다른 쿼리를 가질 이유가 없기 때문에 이러한 로직이 포함되었습니다.
 >```
 >/**
 > * 기본 해시 함수
