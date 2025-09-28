@@ -1,0 +1,167 @@
+---
+title: "React Deep Dive 1. 들어가며"
+date: "2025-09-28T21:09:18.164Z"
+description: "react에 Deep Dive 하기전에 알아두면 좋을 사전지식을 살펴봅니다."
+category: "기술아티클"
+estimation: 10
+thumbnail: "./thumbnail.png"
+slug: "/react-1"
+---
+
+시리즈의 첫번째 아티클에서는 React를 분석할때 도움이 될 등장배경에 대해 살펴보겠습니다. 이번 아티클에서는 코드가 등장하지 않기 때문에 준비 운동 정도로 생각하면서 가볍게 살펴보시면 되겠습니다.
+
+> 이번 아티클에서 분석하는 React의 버전은 v18.2.0 입니다. v19.1.0버전이 릴리즈 되어있지만 핵심기능에 집중하고자 이전버전을 대상으로합니다.
+
+## React의 등장배경
+
+대부분의 도구는 특정 문제를 특정한 해결하고자 등장합니다. 따라서 이러한 라이브러리의 등장배경을 이해하면 해당 라이브러리가 기반으로 하고 있는 철학과 앞으로 나아갈 방향을 더 잘 이해할 수 있게 됩니다.
+
+라이브러리를 학습할때 반드시 라이브러리의 등장배경을 이해해야한다고 생각하지는 않지만, 이글의 목적은 라이브러리를 분석하는것이기 때문에, 등장배경을 이해하는것은 필수라고 생각합니다. 간단하게 React의 등장배경을 분석해보겠습니다.
+
+### jquery, vanila Javascript와 함께하는 렌더링
+
+React를 사용하는 지금은 dom을 직접 조작할 일이 없지만, 2000년대 중후반까지만 하더라도 상태가 변경되면 이를 UI에 반영하기 위해 javascript나 jquery등을 이용하여 dom을 직접 조작하는것이 매우 일반적이었습니다.
+
+간단한 애플리케이션에서는 이러한 방식이 큰 문제를 일으키지는 않지만, 애플리케이션이 복잡해질경우 새로운 기능을 만들거나 유지보수하는일이 매우 어려워집니다. 어떠한 이유에서 이러한 문제가 발생하는지 아래에서 살펴보겠습니다.
+
+### dom을 직접 조작하였을때 생기는 문제
+
+복잡한 어플리케이션에 상태가 변경되면 이를 UI에 반영하기 위해 dom을 직접 조작하였을때의 어려움을 살펴보기위해 간단한 채팅 애플리케이션을 dom을 직접 조작하는 방식으로 구현해보겠습니다. 채팅 애플리케이션은 다음과 같은 요구사항을 가지고 있습니다.
+
+- 친구의 이름, 상태(온라인, 오프라인)가 표기되어야합니다.
+- 1초마다 서버에서 새로운 데이터를 가져옵니다. 새로운 데이터는 친구의 상태 뿐만 아니라 친구숫자도 변경될수 있습니다.
+
+위 어플리케이션을 실행하게되면 순서와 상태, 그리고 친구 목록 개수도 계속해서 변경될것입니다. 이를 dom을 직접 조작하는 방식으로 코딩해보겠습니다.
+
+```javascript
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <div id="root"></div>
+    <script>
+        const statusMap = {online:"온라인",offline:"오프라인"}
+
+        const makeFakeData = () => {
+            const defaultData = [{name:"김영희",status:"online"},{name:"김철수",status:"online"},{name:"김영수",status:"online"},{name:"박영호",status:"online"},{name:"박유진",status:"online"}]
+
+            return defaultData.filter(()=>Math.floor(Math.random()>0.2)).map(({name,status})=>({name,status:Math.floor(Math.random()*2)?"online":"offline"})).sort((a,b)=>{
+                if(a.status === b.status) return a.name > b.name
+                if(a.status === "online") return -1
+                if(b.status === "online") return 1
+                return 0
+            })
+        }
+
+        const render = (data) => {
+            const rootElement = document.querySelector("#root")
+            const ul = document.createElement('ul');
+
+            data.forEach(person => {
+                const li = document.createElement('li');
+
+                const nameDiv = document.createElement('span');
+                nameDiv.textContent = person.name;
+
+                const statusDiv = document.createElement('span');
+                statusDiv.textContent = person.status === 'online' ? '온라인' : '오프라인';
+
+                li.appendChild(nameDiv);
+                li.appendChild(statusDiv);
+                ul.appendChild(li);
+            });
+
+            rootElement.appendChild(ul);
+        }
+
+        const reRender = (data) => {
+            const rootElement = document.querySelector("#root")
+            const ulElement = document.querySelector("ul")
+            const ulChildNodes = ulElement.childNodes
+
+            ulChildNodes.forEach((node,index)=>{
+                if(!data[index]) return node.remove()
+                node.childNodes.forEach((node,index2)=>{
+                    if(index2===0 && data[index].name !== node.textContent){
+                        node.textContent = data[index].name
+                    }
+
+                    if(index2===1 && statusMap[data[index].status] !== node.textContent){
+                        node.textContent = statusMap[data[index].status]
+                    }
+                })
+            })
+
+            if(ulChildNodes.length < data.length){
+
+                data.filter((_,index)=>index>=ulChildNodes.length).forEach(({name,status})=>{
+                    const li = document.createElement('li');
+
+                    const nameDiv = document.createElement('span');
+                    nameDiv.textContent = name
+
+                    const statusDiv = document.createElement('span');
+                    statusDiv.textContent = status === 'online' ? '온라인' : '오프라인';
+
+                    li.appendChild(nameDiv);
+                    li.appendChild(statusDiv);
+                    ulElement.appendChild(li);
+                })
+
+            }
+        }
+
+        const run = () => {
+            render(makeFakeData())
+            setInterval(()=>reRender(makeFakeData()),1000)
+        }
+
+
+        run()
+
+    </script>
+</body>
+</html>
+```
+
+간단한 요구사항이지만 코드는 그리 간단하지 않습니다. 먼저 최초로 UI를 그리는 render함수를 살펴보겠습니다. 이함수는 그렇게 복잡하지 않습니다. 전체 데이터를 보고 정해진 데이터를 그려내기 때문입니다.
+
+문제는 데이터가 변경될때 사용하는 rerender함수입니다. 이 함수를 살펴보면, 기존 데이터와 새로운 데이터를 비교해 변경된 부분만 변경하고 있는데, 각 요소별로 상태를 비교해야하는것 뿐만 아니라, 이전 상태의 갯수와 현재 상태의 갯수를 비교해 요소를 추가 및 제거해야하는 역할도 가지고 있어 코드를 관리하는것이 쉽지 않습니다.
+
+React팀 또한 rerender함수와 같은 코드를 계속 유지하면서 애플리케이션을 관리하는것이 쉽지 않다고 생각하였습니다. 따라서 이를 제거하기 위해 가장 먼저 떠올린 아이디어는 상태가 변경될때마다 `<div id="root"></div>` 아래의 모든 요소를 제거하고 render함수를 실행해 새로 모든 요소를 새로 그리는것이었습니다. 이는 복잡한 rerender 함수를 작성할 필요성을 없애 주었기에 개발자에게 있어서 아주 좋은 방법이었습니다.
+
+하지만 유저에게 있어서는 최악의 방법이나 다름 없었습니다. 데이터 목록의 길이가 수천, 수만으로 늘어날경우 브라우저가 html요소를 새로 만들고 렌더링하는것에 많은 리소스를 소모하기에 유저는 1초마다 깜빡거리는 화면을 마주하게될것이기 때문입니다.
+
+### Virtual Dom의 등장
+
+React팀은 유저경험을 저해하지 않으면서, 개발자에게 좋은 경험을 주고 싶었습니다. 이를 위해 React팀은 Virtual Dom이라는 개념을 도입하여 개발자는 render함수만 작성하도록하고, 유저는 깜빡거리지 않는 화면을 이용할수 있도록 하였습니다. Virtual Dom이 무엇이길래 이러한 효과를 가져다줄수 있었을까요?
+
+Virtual Dom은 자바스크립트 객체로, 실제 Dom을 본뜬 모양입니다. React는 이러한 Virtual Dom을 이용해 우리가 이전에 작성한 rerender 함수의 역할을 어느정도 대신해주게됩니다. React가 어떻게 이를 이용하여 reredner함수의 역할을 대신하는지 살펴봅시다.
+
+상태가 변경되면 이를 반영하여 화면에 그려야할 Dom을 본뜬 새로운 Virtual Dom을 생성합니다. 새롭게 생성된 Virtual Dom과 현재 Dom에 반영되어 있는 이전 Virtual Dom을 비교하여 변경된 html요소를 찾아냅니다. 이후 변경된 요소만 화면에 변경합니다.
+
+이를 통해 사용자는 JSX 문법을 사용하여 그리고자 하는 화면을 선언적으로 명시하기만 하면 React는 이를 내부적으로 화면에 그려주므로, 개발자는 렌더링 과정에 대해 신경쓰지 않아도 됩니다.
+
+> 여담이지만 현재는 매우 편리하고 인기가 많은 JSX지만, 첫 등장시에는 HTML과 JAvascript를 결합한 최악의 문법으로 평가받기도 했습니다.
+> 일반적으로 가상돔 때문에 React가 빠르다고 하지만, 사실 이제까지의 내용을 종합해보면 상태가 변경될때마다 전체 dom을 새로그리는것보다 가상돔을 이용하는것이 빠르다 라는것이지, jquery나 바닐라자바스크립트를 사용하는것에 비해서는 Virtual Dom도 만들어야하고, 비교도 해야하는 react가 더 빠르다고 보기는 어렵습니다.
+
+### React의 장점
+
+사용자는 React에서 제공하는 JSX 문법을 사용하여 그리고자하는 UI를 선언적으로 명시하기만 하면 됩니다. 왜냐하면
+React는 내부적으로 상태가 변경되었을때, 생성된 Virtual Dom 끼리의 비교를 통해 변경된 부분만 실제 Dom에 반영해주는 로직을 가지고 있기때문입니다.
+
+기존의 jquery, backbone등의 라이브러리와 비교해볼때, React는 유저의 경험을 해치지 않으면서 개발자는 변경된 부분이 어디인지 신경쓰지 않고 상태가 변경되면 새로운 Dom에 렌더링을 한다는 생각으로 개발을 할수 있기에 코드를 이해하고 관리하는것이 매우 용이해 지게됩니다.
+
+## 마치며
+
+이번 아티클에서는 React를 본격적으로 분석하기에 앞서서 살펴보아야할 등장배경과 라이프싸이클을 살펴보았습니다. React를 사용하는데 있어서 필수적인 내용은 아니지만, React를 이해하는데 있어서 큰 도움이 될것입니다. 다음 아티클 부터는 본격적으로 React의 코드를 분석해보겠습니다.
+
+## 참고자료
+
+- https://jser.dev/2023-07-11-overall-of-react-internals
+- https://goidle.github.io/react/in-depth-react-intro/
+- https://www.youtube.com/watch?v=8pDqJVdNa44
