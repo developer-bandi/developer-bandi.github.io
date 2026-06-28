@@ -29,8 +29,14 @@ const Page = ({ data }: Props) => {
           if (category === "전체") return true
           return listInfo.category === category
         })
-        .filter((listInfo)=>{
-          const disabledSlugs = ["/react-1","/react-2","/react-event","/explore-https","/how-work-browser","/hoisting"]
+        .filter(listInfo => {
+          const disabledSlugs = [
+            "/react-2",
+            "/react-event",
+            "/explore-https",
+            "/how-work-browser",
+            "/hoisting",
+          ]
           return !disabledSlugs.includes(listInfo.slug)
         })
     )
