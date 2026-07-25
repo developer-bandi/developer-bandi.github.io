@@ -31,7 +31,6 @@ const Page = ({ data }: Props) => {
         })
         .filter(listInfo => {
           const disabledSlugs = [
-            "/react-2",
             "/react-event",
             "/explore-https",
             "/how-work-browser",
